@@ -357,7 +357,7 @@ def test_atomicite_rollback_erreur_validation(payment_service, sample_student):
         )
     
     # Vérification qu'aucun paiement n'a été inséré
-    paiements = payment_service.payment_repository.get_paiements_by_eleve(sample_student)
+    paiements = payment_service.payment_repository.list_by_student(sample_student)
     assert len(paiements) == 0
 
 
