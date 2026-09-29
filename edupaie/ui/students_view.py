@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
     QHeaderView, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPalette
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
@@ -101,6 +101,10 @@ class StudentsView(QWidget):
         search_label = QLabel("Rechercher :")
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nom ou prénom...")
+        # Couleur du placeholder plus sombre pour meilleure lisibilité
+        palette = self.search_input.palette()
+        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(100, 100, 100))
+        self.search_input.setPalette(palette)
         # Connexion signal -> slot : texte changé -> filtrage en temps réel
         # Pourquoi textChanged.connect : Réagit à chaque frappe pour un filtrage instantané
         self.search_input.textChanged.connect(self._on_search_changed)
@@ -111,6 +115,10 @@ class StudentsView(QWidget):
         classe_label = QLabel("Classe :")
         self.classe_filter = QComboBox()
         self._load_classes_filter()
+        # Couleur du texte plus sombre pour meilleure lisibilité
+        classe_palette = self.classe_filter.palette()
+        classe_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        self.classe_filter.setPalette(classe_palette)
         # Connexion signal -> slot : sélection changée -> filtrage
         self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(classe_label)
@@ -120,6 +128,10 @@ class StudentsView(QWidget):
         statut_label = QLabel("Statut :")
         self.statut_filter = QComboBox()
         self._load_statut_filter()
+        # Couleur du texte plus sombre pour meilleure lisibilité
+        statut_palette = self.statut_filter.palette()
+        statut_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        self.statut_filter.setPalette(statut_palette)
         # Connexion signal -> slot : sélection changée -> filtrage
         self.statut_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(statut_label)

@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QComboBox, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QPalette
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.services.student_service import StudentService
 from edupaie.ui.error_handler import handle_slot_errors
@@ -112,6 +112,10 @@ class Dashboard(QWidget):
         
         self.statut_filter = QComboBox()
         self.statut_filter.addItems(["Tous", "Soldé", "Partiellement payé", "Non payé"])
+        # Couleur du texte plus sombre pour meilleure lisibilité
+        statut_palette = self.statut_filter.palette()
+        statut_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        self.statut_filter.setPalette(statut_palette)
         # Connexion signal -> slot : changement de filtre -> rafraîchissement du tableau
         self.statut_filter.currentTextChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(self.statut_filter)
