@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QSpinBox, QPushButton, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
@@ -35,23 +35,30 @@ from edupaie.ui.error_handler import handle_slot_errors
 class StudentForm(QDialog):
     """
     Formulaire d'ajout ou de modification d'un élève.
-    
+
     Responsabilité : Fournir une interface pour saisir les informations d'un élève
     avec validation et gestion des erreurs.
-    
+
     Pourquoi QDialog : Fenêtre modale qui bloque la fenêtre principale tant que
     l'utilisateur n'a pas validé ou annulé, garantissant une interaction cohérente.
-    
+
     Modes de fonctionnement :
     - Mode ajout : champs vides, bouton "Créer"
     - Mode modification : champs pré-remplis, bouton "Modifier"
-    
+
     La différence entre les modes est gérée par le paramètre student_data :
     - None : mode ajout
     - Dict avec données : mode modification
+
+    Signaux :
+    - student_changed : Émis après qu'un élève a été ajouté ou modifié
     """
-    
-    def __init__(self, student_service: StudentService, 
+
+    # Signal émis après l'ajout ou la modification d'un élève
+    # Pourquoi Signal : Permet de notifier le tableau de bord pour rafraîchissement
+    student_changed = Signal()
+
+    def __init__(self, student_service: StudentService,
                  student_data: Optional[Dict[str, Any]] = None) -> None:
         """
         Initialise le formulaire.
@@ -282,7 +289,11 @@ class StudentForm(QDialog):
                     total_du
                 )
                 QMessageBox.information(self, "Succès", "L'élève a été créé avec succès.")
-            
+
+            # Émission du signal pour notifier le rafraîchissement
+            # Pourquoi Signal : Permet au tableau de bord de se rafraîchir après ajout/modification
+            self.student_changed.emit()
+
             # Fermeture du formulaire avec succès
             # Pourquoi accept() : Indique que l'utilisateur a validé
             self.accept()

@@ -41,23 +41,24 @@ from edupaie.ui.theme import STATUS_COLORS
 class StudentsView(QWidget):
     """
     Vue de la liste des élèves avec recherche, filtre et actions CRUD.
-    
+
     Responsabilité : Afficher la liste des élèves dans un tableau, permettre la recherche
     par texte, le filtrage par classe, et les actions d'ajout, modification et suppression.
-    
+
     Pourquoi QTableWidget : Widget simple pour afficher des données tabulaires
     sans avoir besoin d'un modèle personnalisé (suffisant pour cette fonctionnalité).
-    
+
     Fonctionnalités :
     - Liste des élèves avec colonnes : nom, prénom, classe, total dû, payé, solde, statut
     - Recherche en temps réel par nom/prénom
     - Filtrage par classe
     - Actions : Ajouter, Modifier, Supprimer
     - Double-clic pour ouvrir la fiche détaillée
-    - Signal payment_made pour notifier le tableau de bord après un paiement
-    
+    - Signal payment_made pour notifier le tableau de bord après modifications
+
     Signaux :
-    - payment_made : Émis après qu'un paiement a été enregistré
+    - payment_made : Émis après qu'un paiement a été enregistré,
+                     un élève a été ajouté, modifié ou supprimé
     """
     
     # Signal émis après un paiement
@@ -385,19 +386,22 @@ class StudentsView(QWidget):
     def _on_add_clicked(self) -> None:
         """
         Gère le clic sur le bouton Ajouter.
-        
+
         Ouvre le formulaire d'ajout en mode création (student_data=None).
-        Si l'utilisateur valide, recharge la liste des élèves.
-        
+        Si l'utilisateur valide, recharge la liste des élèves et notifie le tableau de bord.
+
         Pourquoi QDialog.exec() : Bloque la fenêtre principale tant que le formulaire
         est ouvert, garantissant une interaction cohérente.
         """
         # Création du formulaire en mode ajout
         form = StudentForm(self.student_service, student_data=None)
-        
+        # Connexion signal -> slot : élève ajouté -> propagation du signal
+        # Pourquoi connecter : Permet de notifier le tableau de bord pour rafraîchissement
+        form.student_changed.connect(self.payment_made.emit)
+
         # Ouverture du formulaire (bloquant)
         result = form.exec()
-        
+
         # Si l'utilisateur a validé ( QDialog.Accepted)
         if result == QDialog.DialogCode.Accepted:
             # Rechargement de la liste
@@ -428,11 +432,14 @@ class StudentsView(QWidget):
         # Récupération des données de l'élève
         try:
             student = self.student_service.get_student(student_id)
-            
+
             # Ouverture du formulaire en mode modification
             form = StudentForm(self.student_service, student_data=student)
+            # Connexion signal -> slot : élève modifié -> propagation du signal
+            # Pourquoi connecter : Permet de notifier le tableau de bord pour rafraîchissement
+            form.student_changed.connect(self.payment_made.emit)
             result = form.exec()
-            
+
             # Si l'utilisateur a validé
             if result == QDialog.DialogCode.Accepted:
                 # Rechargement de la liste
@@ -482,10 +489,14 @@ class StudentsView(QWidget):
             try:
                 # Suppression de l'élève
                 self.student_service.delete_student(student_id)
-                
+
                 # Message de succès
                 QMessageBox.information(self, "Succès", "L'élève a été supprimé avec succès.")
-                
+
+                # Émission du signal pour notifier le rafraîchissement
+                # Pourquoi Signal : Permet au tableau de bord de se rafraîchir après suppression
+                self.payment_made.emit()
+
                 # Rechargement de la liste
                 self._load_students()
                 
