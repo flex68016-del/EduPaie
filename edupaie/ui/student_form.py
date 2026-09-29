@@ -155,12 +155,16 @@ class StudentForm(QDialog):
             "Modifier" if self.is_edit_mode else "Créer"
         )
         self.btn_validate.setMinimumHeight(35)
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.btn_validate.setStyleSheet("color: black;")
         # Connexion signal -> slot : clic bouton -> validation du formulaire
         # Pourquoi clicked.connect : Mécanisme signal/slot de Qt pour réagir aux événements
         self.btn_validate.clicked.connect(self._on_validate)
         
         self.btn_cancel = QPushButton("Annuler")
         self.btn_cancel.setMinimumHeight(35)
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.btn_cancel.setStyleSheet("color: black;")
         # Connexion signal -> slot : clic bouton -> fermeture du formulaire sans sauvegarder
         self.btn_cancel.clicked.connect(self.reject)
         

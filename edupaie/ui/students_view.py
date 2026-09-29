@@ -172,18 +172,24 @@ class StudentsView(QWidget):
         
         self.btn_add = QPushButton("Ajouter")
         self.btn_add.setMinimumHeight(35)
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.btn_add.setStyleSheet("color: black;")
         # Connexion signal -> slot : clic -> ouverture formulaire d'ajout
         self.btn_add.clicked.connect(self._on_add_clicked)
         
         self.btn_edit = QPushButton("Modifier")
         self.btn_edit.setMinimumHeight(35)
         self.btn_edit.setEnabled(False)  # Désactivé tant qu'aucune sélection
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.btn_edit.setStyleSheet("color: black;")
         # Connexion signal -> slot : clic -> ouverture formulaire de modification
         self.btn_edit.clicked.connect(self._on_edit_clicked)
         
         self.btn_delete = QPushButton("Supprimer")
         self.btn_delete.setMinimumHeight(35)
         self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.btn_delete.setStyleSheet("color: black;")
         # Connexion signal -> slot : clic -> suppression de l'élève sélectionné
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         
