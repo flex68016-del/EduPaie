@@ -271,6 +271,18 @@ class PaymentRepository:
             result = cursor.fetchone()
             max_seq = result['max_seq'] if result and result['max_seq'] else 0
             return max_seq + 1
+        else:
+            # Création d'une nouvelle transaction (cas d'appel isolé)
+            with self.database.transaction() as cursor:
+                cursor.execute(
+                    """SELECT MAX(CAST(substr(numero_recu, 10) AS INTEGER)) as max_seq
+                       FROM paiement
+                       WHERE numero_recu LIKE ?""",
+                    (f"REC-{annee}-%",)
+                )
+                result = cursor.fetchone()
+                max_seq = result['max_seq'] if result and result['max_seq'] else 0
+                return max_seq + 1
     
     # ===== Section : Requêtes d'agrégation pour le tableau de bord =====
     
@@ -293,15 +305,3 @@ class PaymentRepository:
             cursor.execute("SELECT COALESCE(SUM(montant), 0) as total FROM paiement")
             result = cursor.fetchone()
             return result['total'] if result else 0
-        else:
-            # Création d'une nouvelle transaction (cas d'appel isolé)
-            with self.database.transaction() as cursor:
-                cursor.execute(
-                    """SELECT MAX(CAST(substr(numero_recu, 10) AS INTEGER)) as max_seq
-                       FROM paiement
-                       WHERE numero_recu LIKE ?""",
-                    (f"REC-{annee}-%",)
-                )
-                result = cursor.fetchone()
-                max_seq = result['max_seq'] if result and result['max_seq'] else 0
-                return max_seq + 1
