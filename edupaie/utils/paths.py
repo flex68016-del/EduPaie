@@ -42,8 +42,8 @@ def resource_path(relative_path: Union[str, Path]) -> Path:
         Le chemin absolu vers la ressource.
     
     Example:
-        # En dev : resource_path("db/schema.sql") -> /home/user/edupaie/db/schema.sql
-        # Avec PyInstaller : resource_path("db/schema.sql") -> /tmp/_MEI123/db/schema.sql
+        # En dev : resource_path("edupaie/db/schema.sql") -> /home/user/edupaie/edupaie/db/schema.sql
+        # Avec PyInstaller : resource_path("edupaie/db/schema.sql") -> /tmp/_MEI123/edupaie/db/schema.sql
     """
     # Conversion en Path pour une manipulation plus facile
     relative_path = Path(relative_path)

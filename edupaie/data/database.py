@@ -62,7 +62,8 @@ class Database:
         # Chargement du schéma SQL depuis le fichier
         # Pourquoi : Sépare la définition du schéma du code Python
         # Pourquoi resource_path : Fonctionne aussi avec PyInstaller (sys._MEIPASS)
-        self._schema_path = resource_path("db/schema.sql")
+        # Pourquoi edupaie/db/schema.sql : Structure préservée dans l'exécutable
+        self._schema_path = resource_path("edupaie/db/schema.sql")
     
     def connect(self) -> sqlite3.Connection:
         """

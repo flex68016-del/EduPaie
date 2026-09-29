@@ -41,9 +41,9 @@ a = Analysis(
         # Pourquoi datas : Fichiers non Python qui doivent être inclus dans l'exécutable
         
         # Schéma SQL de la base de données
-        ('edupaie/db/schema.sql', '.'),
+        ('edupaie/db/schema.sql', 'edupaie/db'),
         # Pourquoi : L'application doit pouvoir initialiser le schéma de la base de données
-        # Le '.' signifie : inclus à la racine du dossier d'extraction
+        # Le 'edupaie/db' signifie : inclus dans le sous-dossier edupaie/db/
         
         # Base de données modèle avec données de test
         ('edupaie/edupaie.db', 'edupaie'),
@@ -52,17 +52,20 @@ a = Analysis(
         # Le 'edupaie' signifie : inclus dans le sous-dossier edupaie/ (structure projet)
         
         # Script de création de la base modèle
-        ('edupaie/db/create_model_db.py', '.'),
+        ('edupaie/db/create_model_db.py', 'edupaie/db'),
         # Pourquoi : Permet de recréer la base modèle si nécessaire
+        # Le 'edupaie/db' signifie : inclus dans le sous-dossier edupaie/db/
         
         # Fichiers de l'application (README, etc.)
         ('README.md', '.'),
         # Pourquoi : Permet à l'utilisateur de lire la documentation
+        # Le '.' signifie : inclus à la racine du dossier d'extraction
         
         # Assets (icônes, images, etc.)
-        ('edupaie/assets/*', 'assets'),
+        # ('edupaie/assets/*', 'assets'),
         # Pourquoi : Icônes et autres ressources visuelles de l'application
-        # Le 'assets' signifie : inclus dans le sous-dossier assets/
+        # Commenté : Le dossier assets n'existe pas encore dans le projet
+        # Pour décommenter : Créer le dossier edupaie/assets/ et ajouter des icônes
     ],
     
     hiddenimports=[
@@ -140,12 +143,12 @@ exe = EXE(
     # Pourquoi console=False : Application GUI, pas besoin de console visible
     # Note : Utilise --windowed en ligne de commande, mais console=False dans le .spec
     
-    icon='edupaie/assets/icon.ico',
+    icon='NONE',
     # Icône de l'application
     # Pourquoi icon : L'exe affiche cette icône dans l'explorateur Windows
-    # Note : L'icône doit être créée manuellement ou obtenue depuis une ressource
-    # Pour l'instant, commenté si l'icône n'existe pas encore
-    # icon='NONE',  # Pas d'icône par défaut
+    # Pourquoi NONE : Le dossier assets n'existe pas encore dans le projet
+    # Pour utiliser une icône : Créer edupaie/assets/icon.ico et décommenter ci-dessous
+    # icon='edupaie/assets/icon.ico',
 )
 
 # Collecte les fichiers à inclure dans l'exécutable
