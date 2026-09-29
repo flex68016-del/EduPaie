@@ -40,59 +40,52 @@ def in_memory_db():
     
     Pourquoi nom unique : Évite les conflits si plusieurs tests s'exécutent
     en parallèle sur la même machine.
+    
+    Pourquoi file:?mode=memory : Crée une base en mémoire isolée pour ce test.
+    
+    Returns:
+        Instance de Database connectée à une base en mémoire.
     """
-    db = Database(":memory:")
-    db.initialize_schema()
-    return db
+    # Création d'une base en mémoire avec un nom unique
+    # Pourquoi file:?mode=memory : Crée une base en mémoire isolée pour ce test
+    import uuid
+    db_name = f"file:test_{uuid.uuid4()}?mode=memory&cache=shared"
+    db = Database(db_name)
+    
+    # Initialisation du schéma (automatique via Database.connect())
+    db.connect()
+    
+    yield db
+    
+    # Nettoyage : fermeture de la connexion
+    db.close()
 
 
 @pytest.fixture
-def payment_repository(in_memory_db):
-    """
-    Crée un repository de paiements pour les tests.
-    """
-    return PaymentRepository(in_memory_db)
-
-
-@pytest.fixture
-def student_repository(in_memory_db):
-    """
-    Crée un repository d'élèves pour les tests.
-    """
-    return StudentRepository(in_memory_db)
-
-
-@pytest.fixture
-def student_service(student_repository):
-    """
-    Crée un service d'élèves pour les tests.
-    """
-    return StudentService(student_repository)
-
-
-@pytest.fixture
-def payment_service(payment_repository, student_service):
+def payment_service(in_memory_db):
     """
     Crée un service de paiements pour les tests.
     """
-    return PaymentService(payment_repository, student_service)
+    return PaymentService(in_memory_db)
 
 
 @pytest.fixture
-def sample_classe(student_repository):
+def sample_classe(payment_service):
     """
     Crée une classe de test.
     """
-    classe_id = student_repository.add_classe("6ème A")
-    return classe_id
+    # Insertion directe dans la base pour éviter les validations du service
+    with payment_service.database.transaction() as cursor:
+        cursor.execute("INSERT INTO classe (nom) VALUES (?)", ("6ème A",))
+        return cursor.lastrowid
 
 
 @pytest.fixture
-def sample_student(student_service, sample_classe):
+def sample_student(payment_service, sample_classe):
     """
     Crée un élève de test.
     """
-    student_id = student_service.create_student(
+    student_id = payment_service.student_service.create_student(
         nom="Dupont",
         prenom="Jean",
         classe_id=sample_classe,
@@ -104,7 +97,7 @@ def sample_student(student_service, sample_classe):
 
 # ===== Tests =====
 
-def test_historique_ordre_chronologique(payment_service, student_service, sample_student):
+def test_historique_ordre_chronologique(payment_service, sample_student):
     """
     Test : L'historique est trié chronologiquement (du plus ancien au plus récent).
     
@@ -115,19 +108,19 @@ def test_historique_ordre_chronologique(payment_service, student_service, sample
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=10000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="especes"
     )
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=20000,
-        date="2024-02-20",
+        date_paiement="2024-02-20",
         mode="cheque"
     )
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=15000,
-        date="2024-03-10",
+        date_paiement="2024-03-10",
         mode="virement"
     )
     
@@ -149,16 +142,16 @@ def test_historique_meme_meme_date(payment_service, sample_student):
     ont été effectués le même jour (tri par ID après la date).
     """
     # Création de deux paiements le même jour
-    id1 = payment_service.enregistrer_paiement(
+    paiement1 = payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=10000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="especes"
     )
-    id2 = payment_service.enregistrer_paiement(
+    paiement2 = payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=20000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="cheque"
     )
     
@@ -167,8 +160,8 @@ def test_historique_meme_meme_date(payment_service, sample_student):
     
     # Vérification que l'ordre respecte l'ID (le premier créé en premier)
     assert len(historique) == 2
-    assert historique[0]['id'] == id1
-    assert historique[1]['id'] == id2
+    assert historique[0]['id'] == paiement1['id']
+    assert historique[1]['id'] == paiement2['id']
 
 
 def test_historique_eleve_sans_paiement(payment_service, sample_student):
@@ -212,7 +205,7 @@ def test_historique_donnees_completes(payment_service, sample_student):
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=15000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="especes"
     )
     
@@ -242,7 +235,7 @@ def test_historique_solde_apres_correct(payment_service, sample_student):
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=10000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="especes"
     )
     
@@ -250,7 +243,7 @@ def test_historique_solde_apres_correct(payment_service, sample_student):
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=20000,
-        date="2024-02-20",
+        date_paiement="2024-02-20",
         mode="cheque"
     )
     
@@ -273,19 +266,19 @@ def test_historique_numero_recu_unique(payment_service, sample_student):
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=10000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="especes"
     )
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=20000,
-        date="2024-02-20",
+        date_paiement="2024-02-20",
         mode="cheque"
     )
     payment_service.enregistrer_paiement(
         eleve_id=sample_student,
         montant=15000,
-        date="2024-03-10",
+        date_paiement="2024-03-10",
         mode="virement"
     )
     
@@ -297,7 +290,7 @@ def test_historique_numero_recu_unique(payment_service, sample_student):
     assert len(numeros_recu) == len(set(numeros_recu))
 
 
-def test_historique_plusieurs_eleves(payment_service, student_service, sample_classe):
+def test_historique_plusieurs_eleves(payment_service, sample_classe):
     """
     Test : L'historique est bien isolé par élève.
     
@@ -305,14 +298,14 @@ def test_historique_plusieurs_eleves(payment_service, student_service, sample_cl
     ses propres paiements, pas ceux des autres élèves.
     """
     # Création de deux élèves
-    eleve1_id = student_service.create_student(
+    eleve1_id = payment_service.student_service.create_student(
         nom="Dupont",
         prenom="Jean",
         classe_id=sample_classe,
         annee_scolaire="2024-2025",
         total_du=50000
     )
-    eleve2_id = student_service.create_student(
+    eleve2_id = payment_service.student_service.create_student(
         nom="Martin",
         prenom="Marie",
         classe_id=sample_classe,
@@ -324,7 +317,7 @@ def test_historique_plusieurs_eleves(payment_service, student_service, sample_cl
     payment_service.enregistrer_paiement(
         eleve_id=eleve1_id,
         montant=10000,
-        date="2024-01-15",
+        date_paiement="2024-01-15",
         mode="especes"
     )
     
@@ -332,7 +325,7 @@ def test_historique_plusieurs_eleves(payment_service, student_service, sample_cl
     payment_service.enregistrer_paiement(
         eleve_id=eleve2_id,
         montant=20000,
-        date="2024-02-20",
+        date_paiement="2024-02-20",
         mode="cheque"
     )
     
