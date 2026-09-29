@@ -107,7 +107,7 @@ class Dashboard(QWidget):
         filter_layout = QHBoxLayout()
         
         filter_label = QLabel("Filtrer par statut :")
-        filter_label.setStyleSheet("font-weight: bold;")
+        filter_label.setStyleSheet("font-weight: bold; color: black;")
         filter_layout.addWidget(filter_label)
         
         self.statut_filter = QComboBox()

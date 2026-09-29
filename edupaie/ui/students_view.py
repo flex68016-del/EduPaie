@@ -99,6 +99,7 @@ class StudentsView(QWidget):
         
         # Champ de recherche
         search_label = QLabel("Rechercher :")
+        search_label.setStyleSheet("color: black;")
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nom ou prénom...")
         # Couleur du placeholder plus sombre pour meilleure lisibilité
@@ -113,6 +114,7 @@ class StudentsView(QWidget):
         
         # Filtre par classe
         classe_label = QLabel("Classe :")
+        classe_label.setStyleSheet("color: black;")
         self.classe_filter = QComboBox()
         self._load_classes_filter()
         # Couleur du texte plus sombre pour meilleure lisibilité
@@ -126,6 +128,7 @@ class StudentsView(QWidget):
         
         # Filtre par statut
         statut_label = QLabel("Statut :")
+        statut_label.setStyleSheet("color: black;")
         self.statut_filter = QComboBox()
         self._load_statut_filter()
         # Couleur du texte plus sombre pour meilleure lisibilité
