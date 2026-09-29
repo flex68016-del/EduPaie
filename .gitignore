@@ -40,6 +40,8 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+# Exception : base modèle pour l'exécutable PyInstaller (dans edupaie/)
+!edupaie/edupaie.db
 
 # Logs
 *.log
