@@ -69,6 +69,16 @@ def seed_database() -> None:
     
     try:
         # =====================================================================
+        # Nettoyage des données existantes
+        # =====================================================================
+        # Pourquoi : Permet de réexécuter le script plusieurs fois sans erreur
+        cursor.execute("DELETE FROM paiement")
+        cursor.execute("DELETE FROM eleve")
+        cursor.execute("DELETE FROM classe")
+        conn.commit()
+        print("Données existantes supprimées.")
+        
+        # =====================================================================
         # Insertion des classes (6 classes)
         # =====================================================================
         classes = [
@@ -98,21 +108,33 @@ def seed_database() -> None:
         # Pourquoi 18 élèves : Nombre suffisant pour tester les fonctionnalités
         # Pourquoi 3 par classe : Distribution équilibrée pour tester les filtres
         
+        # Noms et prénoms réalistes pour l'Afrique de l'Ouest
+        noms_prenoms = [
+            ("Kouassi", "Amani"), ("Koffi", "Adjoa"), ("Yao", "Kofi"),  # 6ème A
+            ("Konan", "Binta"), ("Kouamé", "Aya"), ("Aka", "Brou"),  # 6ème B
+            ("M'bengue", "Jean"), ("Touré", "Fatou"), ("Kamara", "Ibrahim"),  # 5ème A
+            ("Diallo", "Aissatou"), ("Sylla", "Moussa"), ("Bah", "Ousmane"),  # 5ème B
+            ("Sow", "Mariam"), ("Ndiaye", "Cheikh"), ("Faye", "Mame"),  # 4ème A
+            ("Cissé", "Abdoulaye"), ("Diop", "Rokhaya"), ("Niang", "Samba"),  # 3ème B
+        ]
+        
         eleves = []
-        eleve_counter = 1
+        eleve_counter = 0
         
         for classe_idx, classe_id in enumerate(classe_ids):
             # 3 élèves par classe avec des dettes variées
             for i in range(3):
-                total_du = 50000  # 50 000 FCFA par élève
-                eleves.append((
-                    f"Nom{eleve_counter}",
-                    f"Prénom{eleve_counter}",
-                    classe_id,
-                    "2024-2025",
-                    total_du
-                ))
-                eleve_counter += 1
+                if eleve_counter < len(noms_prenoms):
+                    nom, prenom = noms_prenoms[eleve_counter]
+                    total_du = 50000  # 50 000 FCFA par élève
+                    eleves.append((
+                        nom,
+                        prenom,
+                        classe_id,
+                        "2024-2025",
+                        total_du
+                    ))
+                    eleve_counter += 1
         
         # Insertion des élèves
         cursor.executemany(

@@ -250,9 +250,12 @@ class PaymentDialog(QDialog):
             self.reject()
     
     @handle_slot_errors
-    def _on_montant_changed(self) -> None:
+    def _on_montant_changed(self, texte: str = "") -> None:
         """
         Gère le changement de montant.
+        
+        Args:
+            texte: Le texte saisi dans le champ montant (émis par textChanged)
         
         Affiche un avertissement si le montant dépasse le solde restant.
         
