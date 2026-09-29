@@ -301,3 +301,43 @@ class StudentRepository:
             
             row = cursor.fetchone()
             return row['nom'] if row else None
+    
+    # ===== Section : Requêtes d'agrégation pour le tableau de bord =====
+    
+    def count_all_students(self) -> int:
+        """
+        Compte le nombre total d'élèves.
+        
+        Returns:
+            Le nombre total d'élèves dans la base de données.
+        
+        Pourquoi COUNT(*) : Compte toutes les lignes de la table eleve.
+        
+        Pourquoi cette méthode : Permet d'afficher le nombre total d'élèves
+        dans le tableau de bord.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : comptage de tous les élèves
+            cursor.execute("SELECT COUNT(*) as nombre FROM eleve")
+            result = cursor.fetchone()
+            return result['nombre'] if result else 0
+    
+    def sum_total_du(self) -> int:
+        """
+        Calcule la somme totale des montants dus par tous les élèves.
+        
+        Returns:
+            La somme totale des montants dus (en FCFA, entier).
+            Retourne 0 s'il n'y a aucun élève.
+        
+        Pourquoi COALESCE(SUM(total_du), 0) : Si la base est vide ou si tous
+        les total_du sont NULL, SUM retourne NULL. COALESCE remplace NULL par 0.
+        
+        Pourquoi cette méthode : Permet d'afficher le total des dettes
+        dans le tableau de bord.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : somme des montants dus
+            cursor.execute("SELECT COALESCE(SUM(total_du), 0) as total FROM eleve")
+            result = cursor.fetchone()
+            return result['total'] if result else 0
