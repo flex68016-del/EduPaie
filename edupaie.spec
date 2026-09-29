@@ -46,10 +46,10 @@ a = Analysis(
         # Le '.' signifie : inclus à la racine du dossier d'extraction
         
         # Base de données modèle avec données de test
-        ('edupaie.db', '.'),
+        ('edupaie/edupaie.db', 'edupaie'),
         # Pourquoi : Base de données modèle avec données de test pour la démonstration
         # L'exécutable copiera cette base vers user_data_dir au premier lancement
-        # Le '.' signifie : inclus à la racine du dossier d'extraction
+        # Le 'edupaie' signifie : inclus dans le sous-dossier edupaie/ (structure projet)
         
         # Script de création de la base modèle
         ('edupaie/db/create_model_db.py', '.'),

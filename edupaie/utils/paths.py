@@ -153,7 +153,8 @@ def initialize_database():
     db_path = user_data_dir() / "edupaie.db"
     
     # Chemin de la base de données modèle (embarquée dans les ressources)
-    db_model_path = resource_path("edupaie.db")
+    # Pourquoi edupaie/edupaie.db : La base modèle est dans le dossier edupaie/ du projet
+    db_model_path = resource_path("edupaie/edupaie.db")
     
     # Si la base persistante n'existe pas, copier la base modèle
     if not db_path.exists():
