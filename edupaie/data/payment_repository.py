@@ -1,0 +1,142 @@
+# =============================================================================
+# payment_repository.py - Repository pour la lecture des paiements
+# =============================================================================
+# Rôle : Fournit les opérations de lecture pour les paiements (calcul du solde).
+# =============================================================================
+# Ce fichier utilise :
+# - data.database.Database pour la connexion à la base de données
+# - sqlite3 pour l'exécution des requêtes SQL
+# =============================================================================
+# Ce fichier est utilisé par :
+# - services.student_service pour le calcul du solde et du statut
+# =============================================================================
+# Note : Ce repository est en lecture seule pour l'instant. Les opérations
+# d'écriture (création de paiements) seront ajoutées dans une fonctionnalité ultérieure.
+# =============================================================================
+
+import sys
+from pathlib import Path
+from typing import Dict, Any
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le fichier est dans edupaie/data/, donc edupaie n'est pas dans le path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from edupaie.data.database import Database
+
+
+class PaymentRepository:
+    """
+    Repository pour la lecture des paiements (calcul du solde).
+    
+    Responsabilité : Fournir les opérations de lecture nécessaires pour calculer
+    le solde d'un élève (total payé, nombre de paiements).
+    
+    Pourquoi un repository séparé : Sépare la logique d'accès aux données des paiements
+    de celle des élèves, respectant le principe de responsabilité unique.
+    
+    Note : Ce repository est en lecture seule dans cette version. Les opérations
+    d'écriture (create, update, delete) seront ajoutées dans la fonctionnalité
+    d'enregistrement des paiements.
+    """
+    
+    def __init__(self, database: Database) -> None:
+        """
+        Initialise le repository avec une connexion à la base de données.
+        
+        Args:
+            database: Instance de la classe Database pour la connexion.
+        """
+        self.database = database
+    
+    def total_paye(self, eleve_id: int) -> int:
+        """
+        Calcule le total des paiements effectués par un élève.
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Le montant total payé par l'élève (en FCFA, entier).
+            Retourne 0 si l'élève n'a aucun paiement.
+        
+        Pourquoi COALESCE(SUM(montant), 0) : Si l'élève n'a aucun paiement,
+        SUM(montant) retourne NULL. COALESCE remplace NULL par 0, ce qui
+        évite des erreurs de calcul (NULL - total_du = NULL).
+        
+        Pourquoi SUM(montant) : Agrégation SQL qui additionne tous les montants
+        des paiements de l'élève.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : somme des montants des paiements de l'élève
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT COALESCE(SUM(montant), 0) as total
+                   FROM paiement
+                   WHERE eleve_id = ?""",
+                (eleve_id,)
+            )
+            
+            result = cursor.fetchone()
+            return result['total'] if result else 0
+    
+    def nombre_paiements(self, eleve_id: int) -> int:
+        """
+        Compte le nombre de paiements effectués par un élève.
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Le nombre de paiements effectués par l'élève.
+            Retourne 0 si l'élève n'a aucun paiement.
+        
+        Pourquoi COUNT(*) : Compte le nombre de lignes (paiements) correspondant
+        à la condition WHERE eleve_id = ?.
+        
+        Pourquoi cette méthode : Permet de distinguer le cas "Non payé"
+        (0 paiements) du cas "Partiellement payé" (au moins 1 paiement).
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : comptage des paiements de l'élève
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT COUNT(*) as nombre
+                   FROM paiement
+                   WHERE eleve_id = ?""",
+                (eleve_id,)
+            )
+            
+            result = cursor.fetchone()
+            return result['nombre'] if result else 0
+    
+    def get_paiements_by_eleve(self, eleve_id: int) -> list:
+        """
+        Récupère la liste des paiements d'un élève.
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Liste de dictionnaires contenant les informations des paiements.
+            Chaque dictionnaire contient : id, montant, date_paiement, mode, numero_recu, solde_apres.
+        
+        Pourquoi cette méthode : Permet d'afficher l'historique des paiements
+        dans la fiche détaillée de l'élève.
+        
+        Pourquoi ORDER BY date_paiement DESC : Affiche les paiements du plus
+        récent au plus ancien, ce qui est plus pertinent pour l'utilisateur.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : sélection des paiements de l'élève
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT id, montant, date_paiement, mode, numero_recu, solde_apres
+                   FROM paiement
+                   WHERE eleve_id = ?
+                   ORDER BY date_paiement DESC""",
+                (eleve_id,)
+            )
+            
+            return [dict(row) for row in cursor.fetchall()]
