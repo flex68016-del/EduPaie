@@ -103,9 +103,10 @@ class StudentsView(QWidget):
         search_label.setStyleSheet("color: black;")
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nom ou prénom...")
-        # Couleur du placeholder en noir pour lisibilité
+        # Couleur du placeholder et du texte en noir pour lisibilité
         palette = self.search_input.palette()
         palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
+        palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
         self.search_input.setPalette(palette)
         # Connexion signal -> slot : texte changé -> filtrage en temps réel
         # Pourquoi textChanged.connect : Réagit à chaque frappe pour un filtrage instantané
@@ -118,10 +119,8 @@ class StudentsView(QWidget):
         classe_label.setStyleSheet("color: black;")
         self.classe_filter = QComboBox()
         self._load_classes_filter()
-        # Couleur du texte plus sombre pour meilleure lisibilité
-        classe_palette = self.classe_filter.palette()
-        classe_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
-        self.classe_filter.setPalette(classe_palette)
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.classe_filter.setStyleSheet("color: black;")
         # Connexion signal -> slot : sélection changée -> filtrage
         self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(classe_label)
@@ -132,10 +131,8 @@ class StudentsView(QWidget):
         statut_label.setStyleSheet("color: black;")
         self.statut_filter = QComboBox()
         self._load_statut_filter()
-        # Couleur du texte plus sombre pour meilleure lisibilité
-        statut_palette = self.statut_filter.palette()
-        statut_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
-        self.statut_filter.setPalette(statut_palette)
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.statut_filter.setStyleSheet("color: black;")
         # Connexion signal -> slot : sélection changée -> filtrage
         self.statut_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(statut_label)

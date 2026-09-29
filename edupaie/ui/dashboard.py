@@ -112,10 +112,8 @@ class Dashboard(QWidget):
         
         self.statut_filter = QComboBox()
         self.statut_filter.addItems(["Tous", "Soldé", "Partiellement payé", "Non payé"])
-        # Couleur du texte plus sombre pour meilleure lisibilité
-        statut_palette = self.statut_filter.palette()
-        statut_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
-        self.statut_filter.setPalette(statut_palette)
+        # Couleur du texte en noir pour lisibilité (override stylesheet global)
+        self.statut_filter.setStyleSheet("color: black;")
         # Connexion signal -> slot : changement de filtre -> rafraîchissement du tableau
         self.statut_filter.currentTextChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(self.statut_filter)
