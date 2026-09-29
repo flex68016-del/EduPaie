@@ -66,9 +66,11 @@ REM Construction de l'exécutable avec PyInstaller
 REM Pourquoi edupaie.spec : Utilise la configuration détaillée du fichier .spec
 REM Pourquoi --clean : Nettoie le dossier de construction avant reconstruction
 REM Pourquoi --noconfirm : Confirme automatiquement le remplacement des fichiers
+REM Pourquoi --collect-all edupaie : Inclut automatiquement tous les sous-modules du package edupaie
+REM Pourquoi --collect-all PySide6 : Inclut automatiquement tous les plugins et sous-modules de PySide6
 REM Pourquoi utiliser le venv : Utilise l'environnement virtuel du projet
 echo Construction de l'executable...
-"%~dp0venv\Scripts\python.exe" -m PyInstaller --clean --noconfirm edupaie.spec
+"%~dp0venv\Scripts\python.exe" -m PyInstaller --clean --noconfirm --collect-all edupaie --collect-all PySide6 edupaie.spec
 if %errorlevel% neq 0 (
     echo [ERREUR] La construction a echoue.
     echo Verifiez les erreurs ci-dessus.
