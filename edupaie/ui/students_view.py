@@ -32,6 +32,7 @@ from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 from edupaie.ui.student_form import StudentForm
+from edupaie.ui.student_detail import StudentDetail
 from edupaie.ui.error_handler import handle_slot_errors
 
 
@@ -46,9 +47,10 @@ class StudentsView(QWidget):
     sans avoir besoin d'un modèle personnalisé (suffisant pour cette fonctionnalité).
     
     Fonctionnalités :
-    - Liste des élèves avec colonnes : nom, prénom, classe, total dû
+    - Liste des élèves avec colonnes : nom, prénom, classe, total dû, payé, solde, statut
     - Recherche par texte (nom ou prénom)
-    - Filtre par classe
+    - Filtre par classe et par statut
+    - Couleurs selon le statut (vert Soldé, orange Partiel, rouge Non payé)
     - Boutons : Ajouter, Modifier, Supprimer
     - Actualisation automatique après chaque action
     """
@@ -105,12 +107,21 @@ class StudentsView(QWidget):
         filter_layout.addWidget(classe_label)
         filter_layout.addWidget(self.classe_filter)
         
+        # Filtre par statut
+        statut_label = QLabel("Statut :")
+        self.statut_filter = QComboBox()
+        self._load_statut_filter()
+        # Connexion signal -> slot : sélection changée -> filtrage
+        self.statut_filter.currentIndexChanged.connect(self._on_filter_changed)
+        filter_layout.addWidget(statut_label)
+        filter_layout.addWidget(self.statut_filter)
+        
         layout.addLayout(filter_layout)
         
         # ===== Section : Tableau des élèves =====
         self.table = QTableWidget()
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Nom", "Prénom", "Classe", "Total dû (FCFA)"])
+        self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels(["Nom", "Prénom", "Classe", "Total dû (FCFA)", "Payé (FCFA)", "Solde (FCFA)", "Statut"])
         
         # Configuration du tableau
         # Pourquoi setSelectionBehavior : Sélectionne la ligne entière au lieu de la cellule
@@ -129,6 +140,9 @@ class StudentsView(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Prénom : extensible
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Classe : auto
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Total : auto
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Payé : auto
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Solde : auto
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Statut : auto
         
         layout.addWidget(self.table)
         
@@ -160,6 +174,10 @@ class StudentsView(QWidget):
         # Connexion signal -> slot : sélection changée -> activation/désactivation boutons
         # Pourquoi itemSelectionChanged : Réagit quand l'utilisateur sélectionne/désélectionne une ligne
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
+        
+        # Connexion signal -> slot : double-clic -> ouverture fiche détaillée
+        # Pourquoi itemDoubleClicked : Permet d'ouvrir la fiche détaillée par double-clic
+        self.table.itemDoubleClicked.connect(self._on_double_clicked)
     
     def _load_classes_filter(self) -> None:
         """
@@ -182,36 +200,50 @@ class StudentsView(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des classes : {str(e)}")
     
+    def _load_statut_filter(self) -> None:
+        """
+        Charge les options du filtre par statut.
+        
+        Ajoute une option "Tous les statuts" en première position pour permettre
+        d'afficher tous les élèves sans filtre de statut.
+        """
+        self.statut_filter.clear()
+        
+        # Option "Tous les statuts"
+        self.statut_filter.addItem("Tous les statuts", None)
+        
+        # Options de statut
+        self.statut_filter.addItem("Soldé", "Soldé")
+        self.statut_filter.addItem("Partiellement payé", "Partiellement payé")
+        self.statut_filter.addItem("Non payé", "Non payé")
+    
     def _load_students(self) -> None:
         """
         Charge et affiche la liste des élèves selon les filtres actuels.
         
         Cette méthode :
-        1. Récupère le texte de recherche et la classe sélectionnée
-        2. Appelle le service pour rechercher les élèves
-        3. Transforme les IDs de classe en noms de classe
-        4. Remplit le tableau avec les résultats
+        1. Récupère le texte de recherche, la classe et le statut sélectionnés
+        2. Appelle le service pour rechercher les élèves avec solde et statut
+        3. Remplit le tableau avec les résultats
         """
         try:
             # Récupération des filtres
             search_text = self.search_input.text().strip()
             classe_id = self.classe_filter.currentData()
+            statut = self.statut_filter.currentData()
             
             # Si classe_id est -1, None (pas de filtre)
             if classe_id == -1:
                 classe_id = None
             
-            # Recherche des élèves
-            students = self.student_service.search_students(search_text, classe_id)
-            
-            # Transformation : remplacement classe_id par nom_classe
-            students_with_names = self.student_service.get_students_with_class_names(students)
+            # Recherche des élèves avec solde et statut
+            students = self.student_service.search_students_with_solde(search_text, classe_id, statut)
             
             # Stockage pour utilisation ultérieure
-            self.current_students = students_with_names
+            self.current_students = students
             
             # Remplissage du tableau
-            self._populate_table(students_with_names)
+            self._populate_table(students)
             
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des élèves : {str(e)}")
@@ -250,9 +282,33 @@ class StudentsView(QWidget):
             self.table.setItem(row, 2, classe_item)
             
             # Total dû
-            total_item = QTableWidgetItem(str(student['total_du']))
+            total_item = QTableWidgetItem(f"{student['total_du']:,}")  # Format avec séparateur de milliers
             total_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(row, 3, total_item)
+            
+            # Payé
+            # Pourquoi student.get('total_paye', 0) : Le service fournit maintenant total_paye
+            total_paye = student.get('total_paye', 0)
+            paye_item = QTableWidgetItem(f"{total_paye:,}")  # Format avec séparateur de milliers
+            paye_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.table.setItem(row, 4, paye_item)
+            
+            # Solde
+            solde_item = QTableWidgetItem(f"{student['solde']:,}")  # Format avec séparateur de milliers
+            solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.table.setItem(row, 5, solde_item)
+            
+            # Statut avec couleur
+            statut_item = QTableWidgetItem(student['statut'])
+            # Attribution de la couleur selon le statut
+            # Pourquoi ces couleurs : Vert pour soldé (positif), orange pour partiel (attention), rouge pour non payé (alerte)
+            if student['statut'] == "Soldé":
+                statut_item.setBackground(Qt.GlobalColor.lightGreen)
+            elif student['statut'] == "Partiellement payé":
+                statut_item.setBackground(Qt.GlobalColor.yellow)
+            elif student['statut'] == "Non payé":
+                statut_item.setBackground(Qt.GlobalColor.lightRed)
+            self.table.setItem(row, 6, statut_item)
         
         # Réactivation du tri
         self.table.setSortingEnabled(True)
@@ -411,3 +467,31 @@ class StudentsView(QWidget):
             
             except Exception as e:
                 QMessageBox.critical(self, "Erreur", f"Erreur lors de la suppression : {str(e)}")
+    
+    @handle_slot_errors
+    def _on_double_clicked(self) -> None:
+        """
+        Gère le double-clic sur une ligne du tableau.
+        
+        Ouvre la fiche détaillée de l'élève sélectionné.
+        
+        Pourquoi itemDoubleClicked.connect : Permet d'ouvrir la fiche détaillée
+        par un double-clic, interaction intuitive pour l'utilisateur.
+        """
+        # Récupération de la ligne sélectionnée
+        selected_items = self.table.selectedItems()
+        if not selected_items:
+            return
+        
+        # Récupération de l'ID de l'élève
+        row = self.table.currentRow()
+        id_item = self.table.item(row, 0)
+        student_id = id_item.data(Qt.ItemDataRole.UserRole)
+        
+        # Ouverture de la fiche détaillée
+        try:
+            detail = StudentDetail(self.student_service, student_id)
+            detail.exec()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture de la fiche : {str(e)}")

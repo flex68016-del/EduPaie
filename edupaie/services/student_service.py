@@ -5,6 +5,7 @@
 # =============================================================================
 # Ce fichier utilise :
 # - data.student_repository.StudentRepository pour l'accès aux données
+# - data.payment_repository.PaymentRepository pour le calcul du solde
 # - services.exceptions pour les erreurs métier
 # =============================================================================
 # Ce fichier est utilisé par :
@@ -22,6 +23,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from edupaie.data.student_repository import StudentRepository
+from edupaie.data.payment_repository import PaymentRepository
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 
@@ -54,6 +56,7 @@ class StudentService:
         """
         self.database = database
         self.repository = StudentRepository(database)
+        self.payment_repository = PaymentRepository(database)
     
     # ===== Section : Validations =====
     
@@ -390,3 +393,172 @@ class StudentService:
             result.append(student_copy)
         
         return result
+    
+    # ===== Section : Calcul du solde et du statut =====
+    
+    def solde(self, eleve_id: int) -> int:
+        """
+        Calcule le solde restant d'un élève.
+        
+        Règle : solde = total_du - total_paye
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Le solde restant (en FCFA, entier).
+            - Si solde > 0 : l'élève doit encore payer
+            - Si solde = 0 : l'élève est soldé
+            - Si solde < 0 : l'élève a payé plus que dû (remboursement)
+        
+        Pourquoi cette formule : Le solde représente ce qu'il reste à payer.
+        Si l'élève a payé 30 000 sur 50 000, le solde est 20 000.
+        
+        Pourquoi ne pas stocker le solde : Le solde est une donnée dérivée
+        qui peut être recalculée à tout moment à partir du total_du et des paiements.
+        Le stocker introduirait un risque d'incohérence si les paiements changent
+        sans mettre à jour le solde. Le recalcul garantit toujours la cohérence.
+        
+        Cas limite total_du = 0 : Si l'élève n'a rien à payer (total_du = 0),
+        le solde est toujours 0, même s'il y a des paiements (ce qui ne devrait
+        pas arriver métier, mais est géré pour éviter les erreurs).
+        """
+        # Récupération de l'élève
+        student = self.repository.get_by_id(eleve_id)
+        if student is None:
+            raise NotFoundError(f"Aucun élève trouvé avec l'identifiant {eleve_id}.")
+        
+        # Récupération du total payé
+        total_paye = self.payment_repository.total_paye(eleve_id)
+        
+        # Calcul du solde
+        solde = student['total_du'] - total_paye
+        
+        return solde
+    
+    def statut(self, eleve_id: int) -> str:
+        """
+        Détermine le statut de paiement d'un élève.
+        
+        Règle de décision (ordre important) :
+        1. Si solde = 0 -> "Soldé"
+        2. Si aucun paiement -> "Non payé"
+        3. Sinon -> "Partiellement payé"
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Le statut de paiement : "Soldé", "Non payé" ou "Partiellement payé".
+        
+        Pourquoi cet ordre de décision :
+        - D'abord vérifier solde = 0 : Car c'est le cas le plus important (soldé)
+        - Ensuite vérifier aucun paiement : Car "Non payé" est plus spécifique que "Partiel"
+        - Sinon "Partiellement payé" : Cas par défaut quand il y a des paiements mais solde > 0
+        
+        Cas limite total_du = 0 : Si l'élève n'a rien à payer (total_du = 0),
+        le solde est 0, donc le statut est "Soldé" même sans paiements.
+        C'est logique : s'il n'a rien à payer, il est considéré comme soldé.
+        """
+        # Récupération du solde
+        solde = self.solde(eleve_id)
+        
+        # Cas 1 : Solde = 0 -> Soldé
+        # Pourquoi en premier : C'est le cas le plus important à afficher
+        if solde == 0:
+            return "Soldé"
+        
+        # Cas 2 : Aucun paiement -> Non payé
+        # Pourquoi en deuxième : Plus spécifique que "Partiellement payé"
+        nombre_paiements = self.payment_repository.nombre_paiements(eleve_id)
+        if nombre_paiements == 0:
+            return "Non payé"
+        
+        # Cas 3 : Sinon -> Partiellement payé
+        # Pourquoi cas par défaut : Il y a des paiements mais le solde > 0
+        return "Partiellement payé"
+    
+    def get_student_with_solde_and_statut(self, eleve_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Récupère un élève avec son solde et son statut.
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Dictionnaire contenant les informations de l'élève avec solde et statut,
+            ou None si non trouvé.
+        
+        Pourquoi cette méthode : Fournit toutes les informations nécessaires
+        pour l'affichage dans la fiche détaillée de l'élève.
+        """
+        student = self.get_student_with_class_name(eleve_id)
+        if student is None:
+            return None
+        
+        # Ajout du solde et du statut
+        student['solde'] = self.solde(eleve_id)
+        student['statut'] = self.statut(eleve_id)
+        
+        return student
+    
+    def get_students_with_solde_and_statut(self, students: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Ajoute le solde, le statut, le total payé et le nom de classe à une liste d'élèves.
+        
+        Args:
+            students: Liste d'élèves (avec id, classe_id)
+        
+        Returns:
+            Liste d'élèves avec solde, statut, total_paye et nom_classe ajoutés.
+            classe_id est remplacé par nom_classe.
+        
+        Pourquoi cette méthode : Transforme une liste d'élèves pour l'affichage
+        dans le tableau avec toutes les colonnes nécessaires.
+        """
+        result = []
+        for student in students:
+            student_copy = dict(student)
+            solde = self.solde(student['id'])
+            total_paye = self.payment_repository.total_paye(student['id'])
+            class_name = self.repository.get_class_name(student.get('classe_id', -1))
+            
+            student_copy['solde'] = solde
+            student_copy['statut'] = self.statut(student['id'])
+            student_copy['total_paye'] = total_paye
+            student_copy['nom_classe'] = class_name or "Classe inconnue"
+            
+            if 'classe_id' in student_copy:
+                del student_copy['classe_id']
+            
+            result.append(student_copy)
+        
+        return result
+    
+    def search_students_with_solde(self, texte: str = "", classe_id: Optional[int] = None, 
+                                  statut: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Recherche des élèves avec filtres et calcul du solde/statut.
+        
+        Args:
+            texte: Texte à rechercher dans le nom ou le prénom
+            classe_id: Optionnel, identifiant de classe pour filtrer
+            statut: Optionnel, statut pour filtrer ("Soldé", "Non payé", "Partiellement payé")
+        
+        Returns:
+            Liste d'élèves avec solde, statut, total_paye et nom_classe, filtrés selon les critères.
+        
+        Pourquoi cette méthode : Combine la recherche et le calcul du solde/statut
+        pour fournir directement les données prêtes à afficher.
+        """
+        # Recherche des élèves
+        students = self.repository.search(texte, classe_id)
+        
+        # Ajout du solde, du statut, du total_paye et du nom de classe
+        students_enriched = self.get_students_with_solde_and_statut(students)
+        
+        # Filtrage par statut si spécifié
+        if statut:
+            students_enriched = [s for s in students_enriched if s['statut'] == statut]
+        
+        return students_enriched
