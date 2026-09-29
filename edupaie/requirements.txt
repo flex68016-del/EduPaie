@@ -1,0 +1,16 @@
+# =============================================================================
+# requirements.txt - EduPaie
+# =============================================================================
+# Liste des dépendances Python du projet EduPaie.
+# =============================================================================
+# Pourquoi ces dépendances :
+# - PySide6 : Framework d'interface desktop (Qt6) pour l'UI
+# - fpdf2 : Génération de PDF pour les reçus de paiement
+# - pytest : Framework de tests unitaires
+# - pyinstaller : Création d'exécutable standalone
+# =============================================================================
+
+PySide6==6.6.0
+fpdf2==2.7.6
+pytest==7.4.3
+pyinstaller==6.3.0
