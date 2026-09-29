@@ -26,8 +26,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from edupaie.services.student_service import StudentService
 from edupaie.services.payment_service import PaymentService
+from edupaie.services.student_service import StudentService
 from edupaie.ui.payment_dialog import PaymentDialog
 from edupaie.ui.error_handler import handle_slot_errors
 
@@ -154,7 +154,7 @@ class StudentDetail(QDialog):
         self.paiements_table = QTableWidget()
         self.paiements_table.setColumnCount(5)
         self.paiements_table.setHorizontalHeaderLabels([
-            "Date", "Montant (FCFA)", "Mode", "N° Reçu", "Solde après (FCFA)"
+            "N° Reçu", "Date", "Mode", "Montant (FCFA)", "Solde après (FCFA)"
         ])
         
         # Configuration du tableau
@@ -165,11 +165,14 @@ class StudentDetail(QDialog):
         
         # Ajustement des colonnes
         header = self.paiements_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Date
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Montant
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # N° Reçu
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Date
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Mode
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # N° Reçu
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Montant
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Solde après
+        
+        # Connexion signal -> slot : sélection -> activation du bouton Consulter le reçu
+        self.paiements_table.itemSelectionChanged.connect(self._on_selection_changed)
         
         layout.addWidget(self.paiements_table)
         
@@ -178,6 +181,14 @@ class StudentDetail(QDialog):
         
         # ===== Boutons =====
         buttons_layout = QHBoxLayout()
+        
+        self.btn_view_receipt = QPushButton("Consulter le reçu")
+        self.btn_view_receipt.setMinimumHeight(35)
+        self.btn_view_receipt.setEnabled(False)  # Désactivé par défaut
+        self.btn_view_receipt.setStyleSheet("background-color: #FF9800; color: white;")
+        # Connexion signal -> slot : clic -> consultation du reçu
+        self.btn_view_receipt.clicked.connect(self._on_view_receipt_clicked)
+        buttons_layout.addWidget(self.btn_view_receipt)
         
         self.btn_new_payment = QPushButton("Nouveau paiement")
         self.btn_new_payment.setMinimumHeight(35)
@@ -241,14 +252,20 @@ class StudentDetail(QDialog):
     
     def _load_paiements(self) -> None:
         """
-        Charge et affiche l'historique des paiements de l'élève.
+        Charge et affiche l'historique chronologique des paiements de l'élève.
         
-        Récupère les paiements via le payment_repository et les affiche
-        dans le tableau.
+        Récupère les paiements via payment_service.historique() et les affiche
+        dans le tableau trié chronologiquement (du plus ancien au plus récent).
+        
+        Pourquoi chronologique : Permet de voir l'évolution des paiements dans le temps,
+        ce qui est plus pertinent pour l'historique que du plus récent au plus ancien.
+        
+        Pourquoi stocker l'ID dans UserRole : Permet de relier chaque ligne du tableau
+        à son paiement en base de données (pour consulter le reçu par exemple).
         """
         try:
-            # Récupération des paiements
-            paiements = self.student_service.payment_repository.get_paiements_by_eleve(self.student_id)
+            # Récupération de l'historique chronologique
+            paiements = self.payment_service.historique(self.student_id)
             
             # Remplissage du tableau
             self.paiements_table.setSortingEnabled(False)
@@ -257,22 +274,25 @@ class StudentDetail(QDialog):
             for row, paiement in enumerate(paiements):
                 self.paiements_table.insertRow(row)
                 
+                # N° Reçu
+                recu_item = QTableWidgetItem(paiement['numero_recu'])
+                # Stockage de l'ID du paiement dans UserRole pour relier à la base
+                # Pourquoi UserRole : Permet de récupérer l'ID quand l'utilisateur sélectionne une ligne
+                recu_item.setData(Qt.ItemDataRole.UserRole, paiement['id'])
+                self.paiements_table.setItem(row, 0, recu_item)
+                
                 # Date
                 date_item = QTableWidgetItem(paiement['date_paiement'])
-                self.paiements_table.setItem(row, 0, date_item)
-                
-                # Montant
-                montant_item = QTableWidgetItem(f"{paiement['montant']:,}")
-                montant_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                self.paiements_table.setItem(row, 1, montant_item)
+                self.paiements_table.setItem(row, 1, date_item)
                 
                 # Mode
                 mode_item = QTableWidgetItem(paiement['mode'].capitalize())
                 self.paiements_table.setItem(row, 2, mode_item)
                 
-                # Numéro de reçu
-                recu_item = QTableWidgetItem(paiement['numero_recu'])
-                self.paiements_table.setItem(row, 3, recu_item)
+                # Montant
+                montant_item = QTableWidgetItem(f"{paiement['montant']:,}")
+                montant_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.paiements_table.setItem(row, 3, montant_item)
                 
                 # Solde après
                 solde_item = QTableWidgetItem(f"{paiement['solde_apres']:,}")
@@ -291,6 +311,72 @@ class StudentDetail(QDialog):
             
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des paiements : {str(e)}")
+    
+    @handle_slot_errors
+    def _on_selection_changed(self) -> None:
+        """
+        Gère le changement de sélection dans le tableau des paiements.
+        
+        Active le bouton "Consulter le reçu" si une ligne est sélectionnée,
+        le désactive sinon.
+        
+        Pourquoi itemSelectionChanged.connect : Permet d'activer/désactiver
+        le bouton de consultation du reçu selon la sélection.
+        """
+        # Vérification si une ligne est sélectionnée
+        selected_items = self.paiements_table.selectedItems()
+        has_selection = len(selected_items) > 0
+        
+        # Activation/désactivation du bouton
+        self.btn_view_receipt.setEnabled(has_selection)
+    
+    @handle_slot_errors
+    def _on_view_receipt_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Consulter le reçu.
+        
+        Affiche un aperçu texte des données figées du paiement sélectionné.
+        
+        Pourquoi un aperçu texte temporaire : La fonctionnalité 5 générera le PDF.
+        Pour l'instant, afficher les données figées pour montrer que l'information
+        est disponible et que la ligne du tableau est bien reliée au paiement en base.
+        
+        Pourquoi l'ID dans UserRole : Permet de récupérer l'ID du paiement sélectionné
+        depuis la ligne du tableau pour le relier à la base de données.
+        """
+        # Récupération de la ligne sélectionnée
+        selected_items = self.paiements_table.selectedItems()
+        if not selected_items:
+            return
+        
+        # Récupération de l'ID du paiement (stocké dans UserRole de la première colonne)
+        row = self.paiements_table.currentRow()
+        recu_item = self.paiements_table.item(row, 0)
+        paiement_id = recu_item.data(Qt.ItemDataRole.UserRole)
+        
+        # Récupération des données du paiement
+        try:
+            paiement = self.payment_service.payment_repository.get_by_id(paiement_id)
+            if paiement is None:
+                QMessageBox.warning(self, "Non trouvé", "Le paiement n'existe pas.")
+                return
+            
+            # Affichage de l'aperçu texte
+            receipt_text = (
+                f"===== REÇU DE PAIEMENT =====\n\n"
+                f"Numéro de reçu : {paiement['numero_recu']}\n"
+                f"Date : {paiement['date_paiement']}\n"
+                f"Mode : {paiement['mode'].capitalize()}\n"
+                f"Montant : {paiement['montant']:,} FCFA\n"
+                f"Solde après : {paiement['solde_apres']:,} FCFA\n\n"
+                f"===== INFORMATIONS FIGÉES =====\n"
+                f"Ces données sont figées et immuables."
+            )
+            
+            QMessageBox.information(self, "Aperçu du reçu", receipt_text)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de la récupération du paiement : {str(e)}")
     
     @handle_slot_errors
     def _on_new_payment_clicked(self) -> None:
