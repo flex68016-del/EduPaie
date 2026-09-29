@@ -156,6 +156,10 @@ class PaymentService:
         Pourquoi cette validation : Empêche de payer plus que ce qui est dû,
         ce qui créerait un solde négatif (remboursement dû) qui doit être traité
         par un processus différent.
+        
+        Note : Cette validation utilise StudentService.solde() qui crée une transaction.
+        Elle doit être appelée AVANT la transaction d'enregistrement pour éviter
+        les transactions imbriquées (SQLite ne les accepte pas).
         """
         # Utilisation du student_service pour calculer le solde
         # Pourquoi réutiliser la logique existante : Évite la duplication du calcul du solde
@@ -212,25 +216,55 @@ class PaymentService:
         self._validate_montant(montant)
         self._validate_date(date_paiement)
         self._validate_mode(mode)
-        self._validate_solde_suffisant(eleve_id, montant)
+        # Note : _validate_solde_suffisant est appelée DANS la transaction
+        # pour éviter les transactions imbriquées (SQLite ne les accepte pas)
         
         # ===== Étape 2 : Transaction atomique =====
         # Pourquoi une transaction explicite : Garantit l'atomicité de l'opération
         # Pourquoi BEGIN IMMEDIATE dans Database.transaction() : Verrouille la base
         # en écriture immédiatement, évitant les conflits de numéros de reçu entre utilisateurs
         with self.database.transaction() as cursor:
-            # Génération du numéro de reçu dans la transaction
-            # Pourquoi dans la transaction : Évite les conflits de numéros entre utilisateurs simultanés
+            # ===== Calcul du solde avant paiement =====
+            # Pourquoi calculer dans la transaction : Évite d'appeler student_service.solde()
+            # qui créerait une transaction imbriquée (SQLite ne l'accepte pas)
+            cursor.execute(
+                """SELECT total_du FROM eleve WHERE id = ?""",
+                (eleve_id,)
+            )
+            student = cursor.fetchone()
+            if student is None:
+                raise NotFoundError(f"Aucun élève trouvé avec l'identifiant {eleve_id}.")
+            
+            total_du = student['total_du']
+            
+            # Récupération du total payé
+            cursor.execute(
+                """SELECT COALESCE(SUM(montant), 0) as total
+                   FROM paiement
+                   WHERE eleve_id = ?""",
+                (eleve_id,)
+            )
+            result = cursor.fetchone()
+            total_paye = result['total'] if result else 0
+            
+            solde_avant = total_du - total_paye
+            
+            # ===== Étape 3 : Validation du solde suffisant =====
+            if montant > solde_avant:
+                raise ValidationError(
+                    f"Le montant ({montant:,} FCFA) dépasse le solde restant ({solde_avant:,} FCFA)."
+                )
+            
+            # ===== Étape 4 : Génération du numéro de reçu =====
+            # Pourquoi passer cursor : Évite de créer une transaction imbriquée (SQLite ne l'accepte pas)
             annee = date_paiement[:4]
-            sequence = self.payment_repository.next_sequence(annee)
+            sequence = self.payment_repository.next_sequence(annee, cursor)
             numero_recu = f"REC-{annee}-{sequence:06d}"
             
-            # ===== Étape 3 : Calcul du solde après paiement =====
-            # Utilisation du student_service pour calculer le solde avant
-            solde_avant = self.student_service.solde(eleve_id)
+            # ===== Étape 5 : Calcul du solde après paiement =====
             solde_apres = solde_avant - montant
             
-            # ===== Étape 4 : Insertion du paiement =====
+            # ===== Étape 6 : Insertion du paiement =====
             cursor.execute(
                 """INSERT INTO paiement 
                    (eleve_id, montant, date_paiement, mode, numero_recu, solde_apres)

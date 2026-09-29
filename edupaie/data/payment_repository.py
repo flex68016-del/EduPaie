@@ -231,12 +231,14 @@ class PaymentRepository:
             result = cursor.fetchone()
             return dict(result) if result else None
     
-    def next_sequence(self, annee: str) -> int:
+    def next_sequence(self, annee: str, cursor=None) -> int:
         """
         Génère le prochain numéro de séquence pour une année donnée.
         
         Args:
             annee: Année sous forme de chaîne (ex: "2024")
+            cursor: Curseur SQLite optionnel (si fourni, utilise ce curseur au lieu
+                    de créer une nouvelle transaction)
         
         Returns:
             Le prochain numéro de séquence (commence à 1 si aucun paiement pour cette année).
@@ -245,21 +247,35 @@ class PaymentRepository:
         où AAAA est l'année et NNNNNN est un numéro séquentiel sur 6 chiffres.
         Cette méthode génère le prochain NNNNNN pour une année donnée.
         
+        Pourquoi le paramètre cursor optionnel : Permet d'appeler cette méthode
+        depuis une transaction existante (enregistrer_paiement) sans créer
+        une transaction imbriquée (ce que SQLite n'accepte pas).
+        
         Pourquoi MAX(...) + 1 : Récupère le plus grand numéro de séquence existant
         pour l'année et ajoute 1 pour obtenir le prochain. S'il n'y a aucun paiement
         pour cette année, retourne 1.
         """
-        with self.database.transaction() as cursor:
-            # Requête SQL : récupération du plus grand numéro de séquence pour l'année
-            # Pourquoi LIKE REC-AAAA-% : Filtre les numéros de reçu pour l'année spécifiée
-            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+        if cursor is not None:
+            # Utilisation du curseur fourni (pas de nouvelle transaction)
+            # Pourquoi : Évite les transactions imbriquées
             cursor.execute(
                 """SELECT MAX(CAST(substr(numero_recu, 10) AS INTEGER)) as max_seq
                    FROM paiement
                    WHERE numero_recu LIKE ?""",
                 (f"REC-{annee}-%",)
             )
-            
             result = cursor.fetchone()
             max_seq = result['max_seq'] if result and result['max_seq'] else 0
             return max_seq + 1
+        else:
+            # Création d'une nouvelle transaction (cas d'appel isolé)
+            with self.database.transaction() as cursor:
+                cursor.execute(
+                    """SELECT MAX(CAST(substr(numero_recu, 10) AS INTEGER)) as max_seq
+                       FROM paiement
+                       WHERE numero_recu LIKE ?""",
+                    (f"REC-{annee}-%",)
+                )
+                result = cursor.fetchone()
+                max_seq = result['max_seq'] if result and result['max_seq'] else 0
+                return max_seq + 1
