@@ -131,6 +131,10 @@ a = Analysis(
         
         'edupaie.data.payment_repository',
         # Pourquoi : Importé par payment_service.py, non détecté automatiquement
+        
+        # Modules utils
+        'edupaie.utils.paths',
+        # Pourquoi : Importé par database.py et initialize_database(), non détecté automatiquement
     ],
     
     hookspath=[],
