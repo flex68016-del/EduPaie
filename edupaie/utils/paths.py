@@ -1,18 +1,24 @@
 # =============================================================================
-# paths.py - Gestion des chemins de ressources
+# paths.py - Gestion des chemins de ressources et de données utilisateur
 # =============================================================================
-# Rôle : Fournit des fonctions pour gérer les chemins de fichiers et de ressources.
+# Rôle : Fournit les fonctions pour gérer les chemins de fichiers, de ressources
+# et de données utilisateur, ainsi que l'initialisation de la base de données.
 # =============================================================================
 # Ce fichier utilise :
 # - sys pour détecter l'environnement d'exécution (dev ou PyInstaller)
 # - os.path pour la manipulation des chemins
+# - shutil pour copier des fichiers
+# - logging pour la gestion des logs
 # =============================================================================
 # Ce fichier est utilisé par :
 # - L'application pour localiser les fichiers de configuration, la base de données, etc.
+# - L'initialisation de la base de données au premier lancement
 # =============================================================================
 
 import sys
 import os
+import shutil
+import logging
 from pathlib import Path
 from typing import Union
 
@@ -69,10 +75,15 @@ def user_data_dir() -> Path:
     - Les fichiers de configuration
     - Les logs
     - Les fichiers temporaires
+    - Les reçus PDF générés
     
     Pourquoi un répertoire séparé : Sépare les données de l'application du code,
     permet de mettre à jour l'application sans perdre les données utilisateur,
-    et respecte les conventions de chaque OS (AppData sur Windows, ~/.config sur Linux).
+    et respecte les conventions de chaque OS.
+    
+    Pourquoi %APPDATA% sur Windows : C'est le dossier standard pour les données
+    applications (Roaming AppData est synchronisé entre les machines si l'utilisateur
+    utilise un profil itinérant). L'application y stocke ses données de manière persistante.
     
     Returns:
         Le chemin vers le répertoire des données utilisateur.
@@ -89,7 +100,10 @@ def user_data_dir() -> Path:
     # Pourquoi : Chaque OS a son propre emplacement pour les données utilisateur
     if sys.platform == "win32":
         # Windows : AppData\Roaming
-        # Pourquoi APPDATA : Variable d'environnement standard de Windows
+        # Pourquoi %APPDATA% : Variable d'environnement standard de Windows
+        # Pourquoi APPDATA au lieu de LOCALAPPDATA : AppData/Roaming est synchronisé
+        # entre les machines via les profils itinérants, ce qui est souhaitable pour
+        # une application de gestion de paiements accessibles sur plusieurs postes
         base_path = Path(os.environ.get('APPDATA', Path.home() / 'AppData' / 'Roaming'))
     elif sys.platform == "darwin":
         # macOS : Library/Application Support
@@ -109,3 +123,59 @@ def user_data_dir() -> Path:
     data_dir.mkdir(parents=True, exist_ok=True)
     
     return data_dir
+
+
+def initialize_database():
+    """
+    Initialise la base de données au premier lancement de l'application.
+    
+    Au premier lancement, cette fonction :
+    1. Copie la base de données modèle (edupaie.db avec données de test) depuis
+       les ressources vers le dossier utilisateur
+    2. Si la base modèle n'existe pas, crée une base vide via Database.initialize_schema()
+    
+    Pourquoi cette fonction : Permet à l'application de démarrer avec des données
+    de test pour la démonstration, tout en garantissant que les données sont stockées
+    dans un dossier persistant (pas dans le dossier temporaire de PyInstaller).
+    
+    Pourquoi ne pas écrire dans le dossier PyInstaller : PyInstaller extrait l'application
+    dans un dossier temporaire (sys._MEIPASS) qui est supprimé à la fermeture de l'application.
+    Les données écrites dans ce dossier seraient perdues à chaque fermeture, ce qui n'est
+    pas acceptable pour une application de gestion de paiements.
+    
+    Pourquoi user_data_dir : Ce dossier est persistant et respecte les conventions OS,
+    garantissant que les données survivent aux mises à jour de l'application.
+    """
+    from edupaie.data.database import Database
+    from edupaie.utils.paths import resource_path, user_data_dir
+    
+    # Chemin de la base de données persistante
+    db_path = user_data_dir() / "edupaie.db"
+    
+    # Chemin de la base de données modèle (embarquée dans les ressources)
+    db_model_path = resource_path("edupaie.db")
+    
+    # Si la base persistante n'existe pas, copier la base modèle
+    if not db_path.exists():
+        if db_model_path.exists():
+            # Copie de la base modèle vers le dossier utilisateur
+            shutil.copy2(db_model_path, db_path)
+        else:
+            # Si la base modèle n'existe pas, créer une base vide
+            Database(str(db_path)).connect()
+    
+    # Configuration du logging pour écrire dans le dossier utilisateur
+    # Pourquoi logging : Permet de tracer les erreurs et le comportement de l'application
+    # Pourquoi dossier utilisateur : Les logs sont persistants et accessibles pour le support
+    log_file = user_data_dir() / "edupaie.log"
+    
+    logging.basicConfig(
+        filename=str(log_file),
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    logging.info("Application EduPaie démarrée")
+    logging.info(f"Base de données : {db_path}")
+    logging.info(f"Fichier de logs : {log_file}")
