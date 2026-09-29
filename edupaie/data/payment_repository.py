@@ -1,7 +1,7 @@
 # =============================================================================
-# payment_repository.py - Repository pour la lecture des paiements
+# payment_repository.py - Repository pour les paiements
 # =============================================================================
-# Rôle : Fournit les opérations de lecture pour les paiements (calcul du solde).
+# Rôle : Fournit les opérations de lecture et d'écriture pour les paiements.
 # =============================================================================
 # Ce fichier utilise :
 # - data.database.Database pour la connexion à la base de données
@@ -9,9 +9,7 @@
 # =============================================================================
 # Ce fichier est utilisé par :
 # - services.student_service pour le calcul du solde et du statut
-# =============================================================================
-# Note : Ce repository est en lecture seule pour l'instant. Les opérations
-# d'écriture (création de paiements) seront ajoutées dans une fonctionnalité ultérieure.
+# - services.payment_service pour l'enregistrement des paiements
 # =============================================================================
 
 import sys
@@ -140,3 +138,128 @@ class PaymentRepository:
             )
             
             return [dict(row) for row in cursor.fetchall()]
+    
+    # ===== Section : Opérations d'écriture =====
+    
+    def add(self, eleve_id: int, montant: int, date_paiement: str, 
+            mode: str, numero_recu: str, solde_apres: int) -> int:
+        """
+        Ajoute un nouveau paiement dans la base de données.
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+            montant: Montant du paiement (en FCFA, entier)
+            date_paiement: Date du paiement (format ISO YYYY-MM-DD)
+            mode: Mode de paiement ('especes', 'cheque', 'virement', 'mobile_money')
+            numero_recu: Numéro unique du reçu (format REC-AAAA-NNNNNN)
+            solde_apres: Solde après ce paiement (en FCFA, entier)
+        
+        Returns:
+            L'identifiant du paiement créé.
+        
+        Raises:
+            sqlite3.IntegrityError: Si le numéro de reçu existe déjà (UNIQUE constraint).
+        
+        Pourquoi le paramètre solde_apres : Le solde après paiement est calculé
+        et figé au moment du paiement. Cela permet de suivre l'historique de l'évolution
+        du solde et de détecter des erreurs de calcul si nécessaire.
+        
+        Pourquoi la contrainte UNIQUE sur numero_recu : Empêche d'avoir deux paiements
+        avec le même numéro de reçu, ce qui serait une erreur administrative.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : insertion d'un nouveau paiement
+            # Pourquoi les paramètres "?" : Protection contre les injections SQL
+            cursor.execute(
+                """INSERT INTO paiement 
+                   (eleve_id, montant, date_paiement, mode, numero_recu, solde_apres)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (eleve_id, montant, date_paiement, mode, numero_recu, solde_apres)
+            )
+            
+            return cursor.lastrowid
+    
+    def get_by_id(self, paiement_id: int) -> Dict[str, Any]:
+        """
+        Récupère un paiement par son identifiant.
+        
+        Args:
+            paiement_id: Identifiant du paiement
+        
+        Returns:
+            Dictionnaire contenant les informations du paiement, ou None si non trouvé.
+        
+        Pourquoi cette méthode : Permet de récupérer les détails d'un paiement
+        pour affichage ou vérification.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : sélection d'un paiement par son ID
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT id, eleve_id, montant, date_paiement, mode, numero_recu, solde_apres
+                   FROM paiement
+                   WHERE id = ?""",
+                (paiement_id,)
+            )
+            
+            result = cursor.fetchone()
+            return dict(result) if result else None
+    
+    def get_by_receipt_number(self, numero_recu: str) -> Dict[str, Any]:
+        """
+        Récupère un paiement par son numéro de reçu.
+        
+        Args:
+            numero_recu: Numéro unique du reçu (format REC-AAAA-NNNNNN)
+        
+        Returns:
+            Dictionnaire contenant les informations du paiement, ou None si non trouvé.
+        
+        Pourquoi cette méthode : Permet de vérifier si un numéro de reçu existe déjà
+        avant de générer un nouveau numéro (évite les doublons).
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : sélection d'un paiement par son numéro de reçu
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT id, eleve_id, montant, date_paiement, mode, numero_recu, solde_apres
+                   FROM paiement
+                   WHERE numero_recu = ?""",
+                (numero_recu,)
+            )
+            
+            result = cursor.fetchone()
+            return dict(result) if result else None
+    
+    def next_sequence(self, annee: str) -> int:
+        """
+        Génère le prochain numéro de séquence pour une année donnée.
+        
+        Args:
+            annee: Année sous forme de chaîne (ex: "2024")
+        
+        Returns:
+            Le prochain numéro de séquence (commence à 1 si aucun paiement pour cette année).
+        
+        Pourquoi ce format : Les numéros de reçu sont au format REC-AAAA-NNNNNN
+        où AAAA est l'année et NNNNNN est un numéro séquentiel sur 6 chiffres.
+        Cette méthode génère le prochain NNNNNN pour une année donnée.
+        
+        Pourquoi MAX(...) + 1 : Récupère le plus grand numéro de séquence existant
+        pour l'année et ajoute 1 pour obtenir le prochain. S'il n'y a aucun paiement
+        pour cette année, retourne 1.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : récupération du plus grand numéro de séquence pour l'année
+            # Pourquoi LIKE REC-AAAA-% : Filtre les numéros de reçu pour l'année spécifiée
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT MAX(CAST(substr(numero_recu, 10) AS INTEGER)) as max_seq
+                   FROM paiement
+                   WHERE numero_recu LIKE ?""",
+                (f"REC-{annee}-%",)
+            )
+            
+            result = cursor.fetchone()
+            max_seq = result['max_seq'] if result and result['max_seq'] else 0
+            return max_seq + 1
