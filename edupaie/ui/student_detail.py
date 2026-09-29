@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
     QFileDialog
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal, Signal
 from PySide6.QtGui import QFont
 from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
@@ -50,6 +50,10 @@ class StudentDetail(QDialog):
     - Historique des paiements (date, montant, mode, numéro de reçu, solde après)
     - Couleur du statut (vert Soldé, orange Partiel, rouge Non payé)
     """
+    
+    # Signal émis après un paiement
+    # Pourquoi Signal : Permet de notifier la vue principale pour rafraîchissement
+    payment_made = Signal()
     
     def __init__(self, student_service: StudentService, student_id: int) -> None:
         """
@@ -511,9 +515,17 @@ class StudentDetail(QDialog):
             self
         )
         
+        # Connexion signal -> slot : paiement effectué -> propagation du signal
+        # Pourquoi connecter : Permet de notifier la vue principale pour rafraîchissement
+        payment_dialog.payment_made.connect(self.payment_made.emit)
+        
         result = payment_dialog.exec()
         
         # Si l'utilisateur a validé ( QDialog.Accepted)
         if result == QDialog.DialogCode.Accepted:
             # Rechargement des données de la fiche
             self._load_student_data()
+            
+            # Émission du signal pour notifier le rafraîchissement
+            # Pourquoi Signal : Permet au tableau de bord de se rafraîchir après paiement
+            self.payment_made.emit()
