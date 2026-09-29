@@ -1,0 +1,18 @@
+# Règles de développement EduPaie
+
+## VÉRIFICATION OBLIGATOIRE
+Après avoir créé ou modifié des fichiers, exécutez les commandes suivantes avant de déclarer une tâche terminée :
+
+```bash
+python -m compileall -q edupaie
+pytest
+```
+
+**Règles de formatage :**
+- Chaque commentaire commence par #
+- Chaque docstring est encadrée par des triples guillemets fermés (""" ... """)
+- Ne déclarez jamais une tâche terminée si l'une de ces commandes échoue
+
+**Pourquoi ces vérifications :**
+- compileall détecte les erreurs de syntaxe Python (docstrings non fermées, commentaires mal formés)
+- pytest vérifie que les tests passent (les modifications ne cassent pas le code existant)
