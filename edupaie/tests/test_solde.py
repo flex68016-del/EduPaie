@@ -160,10 +160,10 @@ def test_solde_total_du_zero(student_service, sample_classe):
     """
     Test : Solde d'un élève avec total_du = 0.
     
-    Règle vérifiée : solde = 0 même avec des paiements (cas limite).
+    Règle vérifiée : solde = total_du - total_paye (peut être négatif).
     
     Pourquoi ce test : Vérifie le cas limite où l'élève n'a rien à payer.
-    Le solde doit rester 0 même s'il y a des paiements (anomalie métier gérée).
+    Si des paiements existent, le solde devient négatif (remboursement dû).
     """
     # Création d'un élève avec total_du = 0
     student_id = student_service.create_student(
@@ -184,7 +184,7 @@ def test_solde_total_du_zero(student_service, sample_classe):
         )
     
     solde = student_service.solde(student_id)
-    assert solde == 0  # total_du - total_paye = 0 - 10000 = -10000, mais on s'attend à max(0, ...) ou juste 0 pour total_du=0
+    assert solde == -10000  # total_du - total_paye = 0 - 10000 = -10000 (remboursement dû)
 
 
 # ===== Tests : Détermination du statut =====

@@ -559,6 +559,6 @@ class StudentService:
         
         # Filtrage par statut si spécifié
         if statut:
-            students_enriched = [s for s in students_enriched if s['statut'] == stat]
+            students_enriched = [s for s in students_enriched if s['statut'] == statut]
         
         return students_enriched
