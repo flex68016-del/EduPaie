@@ -15,7 +15,7 @@
 
 import sys
 from PySide6.QtWidgets import QApplication
-from ui.main_window import MainWindow
+from edupaie.ui.main_window import MainWindow
 
 def main() -> None:
     """
@@ -34,7 +34,7 @@ def main() -> None:
     
     # Configuration de l'exception hook global pour afficher les erreurs dans QMessageBox
     # Cela remplace le comportement par défaut qui affiche l'erreur dans la console
-    from ui.error_handler import setup_exception_handler
+    from edupaie.ui.error_handler import setup_exception_handler
     setup_exception_handler()
     
     # Création et affichage de la fenêtre principale
