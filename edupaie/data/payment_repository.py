@@ -283,3 +283,25 @@ class PaymentRepository:
                 result = cursor.fetchone()
                 max_seq = result['max_seq'] if result and result['max_seq'] else 0
                 return max_seq + 1
+    
+    # ===== Section : Requêtes d'agrégation pour le tableau de bord =====
+    
+    def sum_all_payments(self) -> int:
+        """
+        Calcule la somme totale de tous les paiements enregistrés.
+        
+        Returns:
+            La somme totale des paiements (en FCFA, entier).
+            Retourne 0 s'il n'y a aucun paiement.
+        
+        Pourquoi COALESCE(SUM(montant), 0) : Si la base est vide ou si le SUM
+        retourne NULL, COALESCE remplace NULL par 0.
+        
+        Pourquoi cette méthode : Permet d'afficher le total encaissé
+        dans le tableau de bord.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : somme de tous les montants de paiements
+            cursor.execute("SELECT COALESCE(SUM(montant), 0) as total FROM paiement")
+            result = cursor.fetchone()
+            return result['total'] if result else 0

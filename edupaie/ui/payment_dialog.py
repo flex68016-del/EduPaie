@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QComboBox, QDateEdit, QPushButton, QMessageBox, QFrame,
     QFileDialog
 )
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import Qt, QDate, Signal
 from PySide6.QtGui import QIntValidator
 from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
@@ -53,6 +53,10 @@ class PaymentDialog(QDialog):
     - Avertissement si montant > solde
     - Validation UI pour le confort utilisateur
     """
+    
+    # Signal émis après un paiement
+    # Pourquoi Signal : Permet de notifier la vue principale pour rafraîchissement
+    payment_made = Signal()
     
     def __init__(self, payment_service: PaymentService, student_service: StudentService,
                  receipt_service: ReceiptService, student_id: int, parent=None) -> None:
@@ -336,6 +340,10 @@ class PaymentDialog(QDialog):
             
             # Stockage de l'ID du paiement pour générer le reçu
             self.dernier_paiement_id = paiement['id']
+            
+            # Émission du signal pour notifier le rafraîchissement
+            # Pourquoi Signal : Permet au tableau de bord de se rafraîchir après paiement
+            self.payment_made.emit()
             
             # Proposition de générer le reçu
             self._proposer_recu()

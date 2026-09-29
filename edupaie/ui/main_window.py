@@ -29,7 +29,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from edupaie.data.database import Database
 from edupaie.services.student_service import StudentService
+from edupaie.services.dashboard_service import DashboardService
 from edupaie.ui.students_view import StudentsView
+from edupaie.ui.dashboard import Dashboard
 
 
 class MainWindow(QMainWindow):
@@ -67,6 +69,10 @@ class MainWindow(QMainWindow):
         # Pourquoi : Les services sont partagés entre les pages et doivent être initialisés
         self.database = Database()
         self.student_service = StudentService(self.database)
+        self.dashboard_service = DashboardService(
+            self.student_service.repository,
+            self.student_service.payment_repository
+        )
         
         # Création du widget central
         # Pourquoi QWidget central : QMainWindow a un widget central obligatoire
@@ -154,40 +160,24 @@ class MainWindow(QMainWindow):
         Crée les différentes pages de l'application et les ajoute au stack widget.
         
         Crée :
-        - Page Tableau de bord (placeholder pour l'instant)
+        - Page Tableau de bord (Dashboard avec KPI et liste des élèves)
         - Page Élèves (vue complète avec StudentsView)
+        
+        Pourquoi le tableau de bord en premier : C'est la page d'accueil qui donne
+        une vue d'ensemble immédiate de la situation financière.
         """
-        # Page Tableau de bord (placeholder)
-        dashboard_page = self._create_placeholder_page("Tableau de bord")
+        # Page Tableau de bord (Dashboard avec KPI et liste des élèves)
+        # Pourquoi Dashboard : Affiche les 4 KPI et la liste des élèves filtrable
+        dashboard_page = Dashboard(self.dashboard_service, self.student_service)
         self.stack.addWidget(dashboard_page)
         
         # Page Élèves (vue complète)
         # Pourquoi StudentsView : Vue complète avec tableau, recherche, filtre et actions CRUD
         students_page = StudentsView(self.student_service)
+        # Connexion signal -> slot : paiement effectué -> rafraîchissement tableau de bord
+        # Pourquoi connecter à la page tableau de bord : Le KPI doit refléter le nouveau paiement
+        students_page.payment_made.connect(lambda: self._refresh_dashboard())
         self.stack.addWidget(students_page)
-    
-    def _create_placeholder_page(self, title: str) -> QWidget:
-        """
-        Crée une page placeholder avec un message "à venir".
-        
-        Args:
-            title: Titre de la page
-        
-        Returns:
-            Le widget contenant la page placeholder.
-        """
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        label = QLabel(f"{title}\n\n(Page à venir)")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label_font = QFont()
-        label_font.setPointSize(16)
-        label.setFont(label_font)
-        layout.addWidget(label)
-        
-        return page
     
     def _show_page(self, index: int) -> None:
         """
@@ -204,6 +194,18 @@ class MainWindow(QMainWindow):
         buttons = [self.btn_dashboard, self.btn_students]
         for i, button in enumerate(buttons):
             button.setChecked(i == index)
+    
+    def _refresh_dashboard(self) -> None:
+        """
+        Rafraîchit le tableau de bord.
+        
+        Pourquoi cette méthode : Permet de rafraîchir les KPI après un paiement.
+        Le tableau de bord est le premier widget dans le stack (index 0).
+        """
+        # Récupération du widget tableau de bord (index 0)
+        dashboard_widget = self.stack.widget(0)
+        if hasattr(dashboard_widget, 'refresh'):
+            dashboard_widget.refresh()
     
     def _apply_style(self) -> None:
         """

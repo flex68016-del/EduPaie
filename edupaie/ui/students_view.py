@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QComboBox, QPushButton, QTableWidget, QTableWidgetItem,
     QHeaderView, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal, Signal
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
@@ -48,6 +48,19 @@ class StudentsView(QWidget):
     
     Fonctionnalités :
     - Liste des élèves avec colonnes : nom, prénom, classe, total dû, payé, solde, statut
+    - Recherche en temps réel par nom/prénom
+    - Filtrage par classe
+    - Actions : Ajouter, Modifier, Supprimer
+    - Double-clic pour ouvrir la fiche détaillée
+    - Signal payment_made pour notifier le tableau de bord après un paiement
+    
+    Signaux :
+    - payment_made : Émis après qu'un paiement a été enregistré
+    """
+    
+    # Signal émis après un paiement
+    # Pourquoi Signal : Permet de notifier le tableau de bord pour rafraîchissement
+    payment_made = Signal()
     - Recherche par texte (nom ou prénom)
     - Filtre par classe et par statut
     - Couleurs selon le statut (vert Soldé, orange Partiel, rouge Non payé)
