@@ -23,12 +23,14 @@ sys.path.insert(0, str(project_root))
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QComboBox, QDateEdit, QPushButton, QMessageBox, QFrame
+    QComboBox, QDateEdit, QPushButton, QMessageBox, QFrame,
+    QFileDialog
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QIntValidator
 from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
+from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.error_handler import handle_slot_errors
 
 
@@ -52,14 +54,15 @@ class PaymentDialog(QDialog):
     - Validation UI pour le confort utilisateur
     """
     
-    def __init__(self, payment_service: PaymentService, student_service: StudentService, 
-                 student_id: int, parent=None) -> None:
+    def __init__(self, payment_service: PaymentService, student_service: StudentService,
+                 receipt_service: ReceiptService, student_id: int, parent=None) -> None:
         """
         Initialise le dialogue de paiement.
         
         Args:
             payment_service: Instance du service pour les opérations de paiement
             student_service: Instance du service pour récupérer les infos élève
+            receipt_service: Instance du service pour générer les reçus PDF
             student_id: Identifiant de l'élève concerné
             parent: Widget parent (optionnel)
         """
@@ -67,7 +70,9 @@ class PaymentDialog(QDialog):
         
         self.payment_service = payment_service
         self.student_service = student_service
+        self.receipt_service = receipt_service
         self.student_id = student_id
+        self.dernier_paiement_id = None  # Stocke l'ID du dernier paiement pour le reçu
         
         # Configuration de la fenêtre
         self.setWindowTitle("Enregistrer un paiement")
@@ -329,8 +334,11 @@ class PaymentDialog(QDialog):
                 f"Solde après : {paiement['solde_apres']:,} FCFA"
             )
             
-            # Fermeture du dialogue avec QDialog.Accepted
-            self.accept()
+            # Stockage de l'ID du paiement pour générer le reçu
+            self.dernier_paiement_id = paiement['id']
+            
+            # Proposition de générer le reçu
+            self._proposer_recu()
             
         except ValidationError as e:
             QMessageBox.warning(self, "Erreur de validation", e.message)
@@ -340,3 +348,140 @@ class PaymentDialog(QDialog):
             
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors de l'enregistrement : {str(e)}")
+    
+    @handle_slot_errors
+    def _proposer_recu(self) -> None:
+        """
+        Propose à l'utilisateur de générer le reçu après un paiement réussi.
+        
+        Présente deux options :
+        - Enregistrer le PDF (QFileDialog)
+        - Imprimer directement (QPrintDialog)
+        
+        Pourquoi cette proposition : Permet à l'utilisateur d'obtenir immédiatement
+        une preuve de paiement sous forme PDF ou imprimée.
+        
+        Pourquoi QDialog avec boutons personnalisés : Plus clair qu'une QMessageBox
+        standard avec oui/non, l'utilisateur choisit explicitement l'action souhaitée.
+        """
+        # Création d'un dialogue personnalisé
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Reçu de paiement")
+        dialog.setMinimumWidth(400)
+        
+        layout = QVBoxLayout()
+        
+        label = QLabel("Voulez-vous générer le reçu de paiement ?")
+        label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        layout.addWidget(label)
+        
+        buttons_layout = QHBoxLayout()
+        
+        btn_save_pdf = QPushButton("Enregistrer le PDF")
+        btn_save_pdf.setMinimumHeight(35)
+        btn_save_pdf.setStyleSheet("background-color: #2196F3; color: white;")
+        btn_save_pdf.clicked.connect(lambda: self._enregistrer_pdf(dialog))
+        buttons_layout.addWidget(btn_save_pdf)
+        
+        btn_print = QPushButton("Imprimer")
+        btn_print.setMinimumHeight(35)
+        btn_print.setStyleSheet("background-color: #FF9800; color: white;")
+        btn_print.clicked.connect(lambda: self._imprimer_recu(dialog))
+        buttons_layout.addWidget(btn_print)
+        
+        btn_skip = QPushButton("Passer")
+        btn_skip.setMinimumHeight(35)
+        btn_skip.clicked.connect(dialog.accept)
+        buttons_layout.addWidget(btn_skip)
+        
+        layout.addLayout(buttons_layout)
+        dialog.setLayout(layout)
+        
+        # Affichage du dialogue
+        dialog.exec()
+        
+        # Fermeture du dialogue de paiement après choix
+        self.accept()
+    
+    @handle_slot_errors
+    def _enregistrer_pdf(self, dialog: QDialog) -> None:
+        """
+        Enregistre le reçu PDF au choix de l'utilisateur.
+        
+        Args:
+            dialog: Dialogue à fermer après enregistrement.
+        
+        Pourquoi QFileDialog.getSaveFileName : Permet à l'utilisateur de choisir
+        le nom et l'emplacement du fichier PDF.
+        
+        Pourquoi dossier par défaut via utils/paths : Stocke les reçus dans un
+        dossier dédié pour l'organisation (user_data_dir/reçus).
+        """
+        from edupaie.utils.paths import user_data_dir
+        
+        # Dossier par défaut pour les reçus
+        receipts_dir = user_data_dir() / "reçus"
+        receipts_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Ouverture du dialogue de sauvegarde
+        fichier_pdf, _ = QFileDialog.getSaveFileName(
+            self,
+            "Enregistrer le reçu",
+            str(receipts_dir / f"REC-{datetime.now().year}-000001.pdf"),
+            "Fichiers PDF (*.pdf)"
+        )
+        
+        if fichier_pdf:
+            try:
+                # Génération du PDF
+                chemin = self.receipt_service.generer_recu(self.dernier_paiement_id, fichier_pdf)
+                QMessageBox.information(
+                    self,
+                    "Succès",
+                    f"Reçu enregistré avec succès :\n{chemin}"
+                )
+                dialog.accept()
+            except Exception as e:
+                QMessageBox.critical(self, "Erreur", f"Erreur lors de la génération du PDF : {str(e)}")
+    
+    @handle_slot_errors
+    def _imprimer_recu(self, dialog: QDialog) -> None:
+        """
+        Imprime directement le reçu.
+        
+        Args:
+            dialog: Dialogue à fermer après impression.
+        
+        Pourquoi approche simplifiée : PySide6 standard n'inclut pas QPdfDocument.
+        Pour l'instant, génère le PDF et informe l'utilisateur qu'il peut l'imprimer
+        via son lecteur PDF.
+        
+        Note : Une implémentation complète nécessiterait d'ajouter PySide6-Pdf
+        ou d'utiliser une bibliothèque externe pour l'impression directe.
+        """
+        from edupaie.utils.paths import user_data_dir
+        import tempfile
+        
+        try:
+            # Génération du PDF dans le dossier reçus
+            receipts_dir = user_data_dir() / "reçus"
+            receipts_dir.mkdir(parents=True, exist_ok=True)
+            
+            paiement = self.payment_service.payment_repository.get_by_id(self.dernier_paiement_id)
+            if paiement is None:
+                QMessageBox.warning(self, "Non trouvé", "Le paiement n'existe pas.")
+                return
+            
+            chemin_pdf = str(receipts_dir / f"{paiement['numero_recu']}.pdf")
+            self.receipt_service.generer_recu(self.dernier_paiement_id, chemin_pdf)
+            
+            QMessageBox.information(
+                self,
+                "PDF généré",
+                f"Le reçu a été généré :\n{chemin_pdf}\n\n"
+                "Vous pouvez l'imprimer depuis votre lecteur PDF."
+            )
+            dialog.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de la génération du PDF : {str(e)}")
