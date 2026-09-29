@@ -1,0 +1,413 @@
+# =============================================================================
+# students_view.py - Vue de la liste des élèves
+# =============================================================================
+# Rôle : QWidget affichant la liste des élèves avec recherche, filtre et actions.
+# =============================================================================
+# Ce fichier utilise :
+# - PySide6 pour les widgets Qt (QTableWidget, QComboBox, QLineEdit, QPushButton)
+# - services.student_service pour la logique métier
+# - services.exceptions pour la gestion des erreurs
+# - ui.student_form pour le formulaire d'ajout/modification
+# =============================================================================
+# Ce fichier est utilisé par :
+# - ui.main_window pour afficher la page des élèves
+# =============================================================================
+
+import sys
+from pathlib import Path
+from typing import Optional
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le fichier est dans edupaie/ui/, donc edupaie n'est pas dans le path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+    QComboBox, QPushButton, QTableWidget, QTableWidgetItem,
+    QHeaderView, QMessageBox
+)
+from PySide6.QtCore import Qt
+from edupaie.services.student_service import StudentService
+from edupaie.data.database import Database
+from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
+from edupaie.ui.student_form import StudentForm
+from edupaie.ui.error_handler import handle_slot_errors
+
+
+class StudentsView(QWidget):
+    """
+    Vue de la liste des élèves avec recherche, filtre et actions CRUD.
+    
+    Responsabilité : Afficher la liste des élèves dans un tableau, permettre la recherche
+    par texte, le filtrage par classe, et les actions d'ajout, modification et suppression.
+    
+    Pourquoi QTableWidget : Widget simple pour afficher des données tabulaires
+    sans avoir besoin d'un modèle personnalisé (suffisant pour cette fonctionnalité).
+    
+    Fonctionnalités :
+    - Liste des élèves avec colonnes : nom, prénom, classe, total dû
+    - Recherche par texte (nom ou prénom)
+    - Filtre par classe
+    - Boutons : Ajouter, Modifier, Supprimer
+    - Actualisation automatique après chaque action
+    """
+    
+    def __init__(self, student_service: StudentService) -> None:
+        """
+        Initialise la vue des élèves.
+        
+        Args:
+            student_service: Instance du service pour les opérations métier
+        """
+        super().__init__()
+        
+        self.student_service = student_service
+        self.current_students = []  # Liste des élèves actuellement affichés
+        
+        # Création de l'interface
+        self._create_ui()
+        
+        # Chargement initial des données
+        self._load_students()
+    
+    def _create_ui(self) -> None:
+        """
+        Crée l'interface utilisateur de la vue.
+        
+        Crée :
+        - Barre de recherche et filtre par classe
+        - Tableau des élèves
+        - Boutons d'action (Ajouter, Modifier, Supprimer)
+        """
+        # Layout principal
+        layout = QVBoxLayout(self)
+        
+        # ===== Section : Recherche et filtre =====
+        filter_layout = QHBoxLayout()
+        
+        # Champ de recherche
+        search_label = QLabel("Rechercher :")
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Nom ou prénom...")
+        # Connexion signal -> slot : texte changé -> filtrage en temps réel
+        # Pourquoi textChanged.connect : Réagit à chaque frappe pour un filtrage instantané
+        self.search_input.textChanged.connect(self._on_search_changed)
+        filter_layout.addWidget(search_label)
+        filter_layout.addWidget(self.search_input)
+        
+        # Filtre par classe
+        classe_label = QLabel("Classe :")
+        self.classe_filter = QComboBox()
+        self._load_classes_filter()
+        # Connexion signal -> slot : sélection changée -> filtrage
+        self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
+        filter_layout.addWidget(classe_label)
+        filter_layout.addWidget(self.classe_filter)
+        
+        layout.addLayout(filter_layout)
+        
+        # ===== Section : Tableau des élèves =====
+        self.table = QTableWidget()
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Nom", "Prénom", "Classe", "Total dû (FCFA)"])
+        
+        # Configuration du tableau
+        # Pourquoi setSelectionBehavior : Sélectionne la ligne entière au lieu de la cellule
+        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        # Pourquoi setSelectionMode : Une seule ligne sélectionnable à la fois
+        self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        # Pourquoi setAlternatingRowColors : Améliore la lisibilité avec des couleurs alternées
+        self.table.setAlternatingRowColors(True)
+        # Pourquoi setSortingEnabled : Permet le tri par colonne en cliquant sur l'en-tête
+        self.table.setSortingEnabled(True)
+        
+        # Ajustement des colonnes
+        header = self.table.horizontalHeader()
+        # Pourquoi setSectionResizeMode : Ajuste automatiquement la largeur des colonnes
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Nom : extensible
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Prénom : extensible
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Classe : auto
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Total : auto
+        
+        layout.addWidget(self.table)
+        
+        # ===== Section : Boutons d'action =====
+        buttons_layout = QHBoxLayout()
+        
+        self.btn_add = QPushButton("Ajouter")
+        self.btn_add.setMinimumHeight(35)
+        # Connexion signal -> slot : clic -> ouverture formulaire d'ajout
+        self.btn_add.clicked.connect(self._on_add_clicked)
+        
+        self.btn_edit = QPushButton("Modifier")
+        self.btn_edit.setMinimumHeight(35)
+        self.btn_edit.setEnabled(False)  # Désactivé tant qu'aucune sélection
+        # Connexion signal -> slot : clic -> ouverture formulaire de modification
+        self.btn_edit.clicked.connect(self._on_edit_clicked)
+        
+        self.btn_delete = QPushButton("Supprimer")
+        self.btn_delete.setMinimumHeight(35)
+        self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
+        # Connexion signal -> slot : clic -> suppression de l'élève sélectionné
+        self.btn_delete.clicked.connect(self._on_delete_clicked)
+        
+        buttons_layout.addWidget(self.btn_add)
+        buttons_layout.addWidget(self.btn_edit)
+        buttons_layout.addWidget(self.btn_delete)
+        layout.addLayout(buttons_layout)
+        
+        # Connexion signal -> slot : sélection changée -> activation/désactivation boutons
+        # Pourquoi itemSelectionChanged : Réagit quand l'utilisateur sélectionne/désélectionne une ligne
+        self.table.itemSelectionChanged.connect(self._on_selection_changed)
+    
+    def _load_classes_filter(self) -> None:
+        """
+        Charge la liste des classes dans le filtre.
+        
+        Ajoute une option "Toutes les classes" en première position pour permettre
+        d'afficher tous les élèves sans filtre.
+        """
+        try:
+            classes = self.student_service.list_classes()
+            self.classe_filter.clear()
+            
+            # Option "Toutes les classes"
+            self.classe_filter.addItem("Toutes les classes", -1)
+            
+            # Ajout des classes
+            for classe in classes:
+                self.classe_filter.addItem(classe['nom'], classe['id'])
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des classes : {str(e)}")
+    
+    def _load_students(self) -> None:
+        """
+        Charge et affiche la liste des élèves selon les filtres actuels.
+        
+        Cette méthode :
+        1. Récupère le texte de recherche et la classe sélectionnée
+        2. Appelle le service pour rechercher les élèves
+        3. Transforme les IDs de classe en noms de classe
+        4. Remplit le tableau avec les résultats
+        """
+        try:
+            # Récupération des filtres
+            search_text = self.search_input.text().strip()
+            classe_id = self.classe_filter.currentData()
+            
+            # Si classe_id est -1, None (pas de filtre)
+            if classe_id == -1:
+                classe_id = None
+            
+            # Recherche des élèves
+            students = self.student_service.search_students(search_text, classe_id)
+            
+            # Transformation : remplacement classe_id par nom_classe
+            students_with_names = self.student_service.get_students_with_class_names(students)
+            
+            # Stockage pour utilisation ultérieure
+            self.current_students = students_with_names
+            
+            # Remplissage du tableau
+            self._populate_table(students_with_names)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des élèves : {str(e)}")
+    
+    def _populate_table(self, students: list) -> None:
+        """
+        Remplit le tableau avec la liste des élèves.
+        
+        Args:
+            students: Liste d'élèves à afficher
+        
+        Pourquoi désactiver le tri pendant le remplissage : Évite les problèmes
+        de performance et de tri incorrect pendant l'ajout des lignes.
+        """
+        # Désactivation du tri pendant le remplissage
+        self.table.setSortingEnabled(False)
+        
+        # Vidage du tableau
+        self.table.setRowCount(0)
+        
+        # Ajout des lignes
+        for row, student in enumerate(students):
+            self.table.insertRow(row)
+            
+            # Nom
+            nom_item = QTableWidgetItem(student['nom'])
+            nom_item.setData(Qt.ItemDataRole.UserRole, student['id'])  # Stocke l'ID
+            self.table.setItem(row, 0, nom_item)
+            
+            # Prénom
+            prenom_item = QTableWidgetItem(student['prenom'])
+            self.table.setItem(row, 1, prenom_item)
+            
+            # Classe
+            classe_item = QTableWidgetItem(student['nom_classe'])
+            self.table.setItem(row, 2, classe_item)
+            
+            # Total dû
+            total_item = QTableWidgetItem(str(student['total_du']))
+            total_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.table.setItem(row, 3, total_item)
+        
+        # Réactivation du tri
+        self.table.setSortingEnabled(True)
+    
+    @handle_slot_errors
+    def _on_search_changed(self) -> None:
+        """
+        Gère le changement de texte dans le champ de recherche.
+        
+        Appelé à chaque frappe dans le champ de recherche pour filtrer
+        la liste des élèves en temps réel.
+        
+        Pourquoi textChanged.connect : Fournit un filtrage instantané sans
+        avoir besoin d'appuyer sur un bouton "Rechercher".
+        """
+        self._load_students()
+    
+    @handle_slot_errors
+    def _on_filter_changed(self) -> None:
+        """
+        Gère le changement de sélection dans le filtre par classe.
+        
+        Appelé quand l'utilisateur change la classe dans le filtre pour
+        mettre à jour la liste des élèves affichés.
+        """
+        self._load_students()
+    
+    def _on_selection_changed(self) -> None:
+        """
+        Gère le changement de sélection dans le tableau.
+        
+        Active ou désactive les boutons Modifier et Supprimer selon
+        qu'une ligne est sélectionnée ou non.
+        
+        Pourquoi itemSelectionChanged.connect : Permet de désactiver les boutons
+        quand aucune ligne n'est sélectionnée, évitant les erreurs.
+        """
+        has_selection = len(self.table.selectedItems()) > 0
+        self.btn_edit.setEnabled(has_selection)
+        self.btn_delete.setEnabled(has_selection)
+    
+    @handle_slot_errors
+    def _on_add_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Ajouter.
+        
+        Ouvre le formulaire d'ajout en mode création (student_data=None).
+        Si l'utilisateur valide, recharge la liste des élèves.
+        
+        Pourquoi QDialog.exec() : Bloque la fenêtre principale tant que le formulaire
+        est ouvert, garantissant une interaction cohérente.
+        """
+        # Création du formulaire en mode ajout
+        form = StudentForm(self.student_service, student_data=None)
+        
+        # Ouverture du formulaire (bloquant)
+        result = form.exec()
+        
+        # Si l'utilisateur a validé ( QDialog.Accepted)
+        if result == QDialog.DialogCode.Accepted:
+            # Rechargement de la liste
+            self._load_students()
+    
+    @handle_slot_errors
+    def _on_edit_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Modifier.
+        
+        Récupère l'élève sélectionné, ouvre le formulaire en mode modification
+        avec ses données, et recharge la liste si validé.
+        
+        Pourquoi vérifier la sélection : Évite d'ouvrir le formulaire sans
+        données si aucune ligne n'est sélectionnée.
+        """
+        # Récupération de la ligne sélectionnée
+        selected_items = self.table.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Avertissement", "Veuillez sélectionner un élève à modifier.")
+            return
+        
+        # Récupération de l'ID de l'élève (stocké dans UserRole de la première colonne)
+        row = self.table.currentRow()
+        id_item = self.table.item(row, 0)
+        student_id = id_item.data(Qt.ItemDataRole.UserRole)
+        
+        # Récupération des données de l'élève
+        try:
+            student = self.student_service.get_student(student_id)
+            
+            # Ouverture du formulaire en mode modification
+            form = StudentForm(self.student_service, student_data=student)
+            result = form.exec()
+            
+            # Si l'utilisateur a validé
+            if result == QDialog.DialogCode.Accepted:
+                # Rechargement de la liste
+                self._load_students()
+                
+        except NotFoundError as e:
+            QMessageBox.warning(self, "Non trouvé", e.message)
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de la modification : {str(e)}")
+    
+    @handle_slot_errors
+    def _on_delete_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Supprimer.
+        
+        Affiche une confirmation, puis supprime l'élève sélectionné.
+        Recharge la liste si la suppression réussit.
+        
+        Pourquoi la confirmation : Empêche les suppressions accidentelles.
+        Pourquoi try/except : Gère le cas où l'élève a des paiements (BusinessRuleError).
+        """
+        # Récupération de la ligne sélectionnée
+        selected_items = self.table.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Avertissement", "Veuillez sélectionner un élève à supprimer.")
+            return
+        
+        # Récupération de l'ID et du nom de l'élève
+        row = self.table.currentRow()
+        id_item = self.table.item(row, 0)
+        student_id = id_item.data(Qt.ItemDataRole.UserRole)
+        nom_item = self.table.item(row, 0)
+        nom = nom_item.text()
+        prenom_item = self.table.item(row, 1)
+        prenom = prenom_item.text()
+        
+        # Confirmation de suppression
+        # Pourquoi QMessageBox.question : Demande confirmation à l'utilisateur
+        reply = QMessageBox.question(
+            self,
+            "Confirmation",
+            f"Voulez-vous vraiment supprimer l'élève {nom} {prenom} ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                # Suppression de l'élève
+                self.student_service.delete_student(student_id)
+                
+                # Message de succès
+                QMessageBox.information(self, "Succès", "L'élève a été supprimé avec succès.")
+                
+                # Rechargement de la liste
+                self._load_students()
+                
+            except NotFoundError as e:
+                QMessageBox.warning(self, "Non trouvé", e.message)
+            
+            except BusinessRuleError as e:
+                # L'élève a des paiements : afficher le message de la règle métier
+                QMessageBox.warning(self, "Impossible de supprimer", e.message)
+            
+            except Exception as e:
+                QMessageBox.critical(self, "Erreur", f"Erreur lors de la suppression : {str(e)}")
