@@ -73,6 +73,7 @@ a = Analysis(
         # Pourquoi hiddenimports : PyInstaller ne détecte pas tous les imports dynamiques
         # ou conditionnels, donc on les liste explicitement
         
+        # Modules PySide6
         'PySide6.QtCore',
         # Pourquoi : Core Qt souvent manquant dans les analyses statiques
         
@@ -82,8 +83,54 @@ a = Analysis(
         'PySide6.QtWidgets',
         # Pourquoi : Widgets Qt souvent manquant dans les analyses statiques
         
+        # Modules fpdf2
         'fpdf',
         # Pourquoi : Bibliothèque de génération PDF, parfois non détectée
+        
+        # Modules UI (tous les fichiers du dossier ui/)
+        'edupaie.ui.students_view',
+        # Pourquoi : Importé par main_window.py, non détecté automatiquement
+        
+        'edupaie.ui.student_form',
+        # Pourquoi : Importé par students_view.py, non détecté automatiquement
+        
+        'edupaie.ui.student_detail',
+        # Pourquoi : Importé par students_view.py, non détecté automatiquement
+        
+        'edupaie.ui.payment_dialog',
+        # Pourquoi : Importé par student_detail.py, non détecté automatiquement
+        
+        'edupaie.ui.dashboard',
+        # Pourquoi : Importé par main_window.py, non détecté automatiquement
+        
+        'edupaie.ui.error_handler',
+        # Pourquoi : Importé par main.py, non détecté automatiquement
+        
+        # Modules services
+        'edupaie.services.student_service',
+        # Pourquoi : Importé par main_window.py, non détecté automatiquement
+        
+        'edupaie.services.payment_service',
+        # Pourquoi : Importé par student_detail.py, non détecté automatiquement
+        
+        'edupaie.services.dashboard_service',
+        # Pourquoi : Importé par main_window.py, non détecté automatiquement
+        
+        'edupaie.services.receipt_service',
+        # Pourquoi : Importé par payment_dialog.py, non détecté automatiquement
+        
+        'edupaie.services.exceptions',
+        # Pourquoi : Importé par tous les services, non détecté automatiquement
+        
+        # Modules data
+        'edupaie.data.database',
+        # Pourquoi : Importé par tous les services, non détecté automatiquement
+        
+        'edupaie.data.student_repository',
+        # Pourquoi : Importé par student_service.py, non détecté automatiquement
+        
+        'edupaie.data.payment_repository',
+        # Pourquoi : Importé par payment_service.py, non détecté automatiquement
     ],
     
     hookspath=[],
