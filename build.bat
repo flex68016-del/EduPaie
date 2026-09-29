@@ -30,15 +30,16 @@ echo.
 
 REM Vérification de l'installation de PyInstaller
 REM Pourquoi : Si PyInstaller n'est pas installé, la construction échouera
-REM Pourquoi pip show : Vérifie si PyInstaller est installé sans erreur
-pip show pyinstaller >nul 2>&1
+REM Pourquoi utiliser le venv : Utilise l'environnement virtuel du projet
+REM Pourquoi pip show avec venv : Vérifie si PyInstaller est installé dans le venv
+"%~dp0venv\Scripts\python.exe" -m pip show pyinstaller >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERREUR] PyInstaller n'est pas installe.
+    echo [ERREUR] PyInstaller n'est pas installe dans le venv.
     echo Installation en cours...
-    pip install pyinstaller
+    "%~dp0venv\Scripts\python.exe" -m pip install pyinstaller
     if %errorlevel% neq 0 (
         echo [ERREUR] Impossible d'installer PyInstaller.
-        echo Veuillez executer : pip install pyinstaller
+        echo Veuillez executer : venv\Scripts\python.exe -m pip install pyinstaller
         pause
         exit /b 1
     )
@@ -65,8 +66,9 @@ REM Construction de l'exécutable avec PyInstaller
 REM Pourquoi edupaie.spec : Utilise la configuration détaillée du fichier .spec
 REM Pourquoi --clean : Nettoie le dossier de construction avant reconstruction
 REM Pourquoi --noconfirm : Confirme automatiquement le remplacement des fichiers
+REM Pourquoi utiliser le venv : Utilise l'environnement virtuel du projet
 echo Construction de l'executable...
-pyinstaller --clean --noconfirm edupaie.spec
+"%~dp0venv\Scripts\python.exe" -m PyInstaller --clean --noconfirm edupaie.spec
 if %errorlevel% neq 0 (
     echo [ERREUR] La construction a echoue.
     echo Verifiez les erreurs ci-dessus.
