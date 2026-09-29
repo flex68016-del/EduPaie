@@ -84,15 +84,6 @@ a = Analysis(
         
         'fpdf',
         # Pourquoi : Bibliothèque de génération PDF, parfois non détectée
-        
-        'fpdf.pdf',
-        # Pourquoi : Module interne de fpdf2
-        
-        'fpdf.fonts',
-        # Pourquoi : Module interne de fpdf2 pour les polices
-        
-        'fpdf.syntax.tagged',
-        # Pourquoi : Module interne de fpdf2 pour la syntaxe PDF
     ],
     
     hookspath=[],
@@ -125,9 +116,17 @@ exe = EXE(
     # Scripts de l'application
     # Pourquoi : Inclut le script principal et ses dépendances
     
-    exclude_binaries=True,
-    # Exclut les binaires de l'exécutable
-    # Pourquoi : Les binaires sont déjà inclus via le paramètre binaries de Analysis
+    a.binaries,
+    # Binaires inclus (DLL, etc.)
+    # Pourquoi : Inclut les DLL nécessaires à PySide6 et à l'application
+    
+    a.datas,
+    # Fichiers de données (SQL, assets, etc.)
+    # Pourquoi : Inclut les fichiers spécifiés dans Analysis.datas
+    
+    [],
+    # Exclusion des binaires (vide)
+    # Pourquoi : Pas de binaires à exclure spécifiquement
     
     name='Edupaie',
     # Nom de l'exécutable généré
@@ -141,7 +140,6 @@ exe = EXE(
     # Pas de console DOS
     # Pourquoi windowed : Crée une application graphique sans console en arrière-plan
     # Pourquoi console=False : Application GUI, pas besoin de console visible
-    # Note : Utilise --windowed en ligne de commande, mais console=False dans le .spec
     
     icon='NONE',
     # Icône de l'application
@@ -149,20 +147,4 @@ exe = EXE(
     # Pourquoi NONE : Le dossier assets n'existe pas encore dans le projet
     # Pour utiliser une icône : Créer edupaie/assets/icon.ico et décommenter ci-dessous
     # icon='edupaie/assets/icon.ico',
-)
-
-# Collecte les fichiers à inclure dans l'exécutable
-coll = COLLECT(
-    exe,
-    a.binaries,
-    # Binaires inclus (DLL, etc.)
-    # Pourquoi : Inclut les DLL nécessaires à PySide6 et à l'application
-    
-    a.datas,
-    # Fichiers de données (SQL, assets, etc.)
-    # Pourquoi : Inclut les fichiers spécifiés dans Analysis.datas
-    
-    strip=False,
-    # Ne supprime pas les symboles de débogage
-    # Pourquoi strip=False : Parfois les symboles sont nécessaires pour PySide6
 )
