@@ -25,7 +25,7 @@ sys.path.insert(0, str(project_root))
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QPushButton, QTableWidget, QTableWidgetItem,
-    QHeaderView, QMessageBox
+    QHeaderView, QMessageBox, QDialog
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QPalette
