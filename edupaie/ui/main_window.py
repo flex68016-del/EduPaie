@@ -5,10 +5,21 @@
 # =============================================================================
 # Ce fichier utilise :
 # - PySide6 pour les widgets Qt
+# - services.student_service pour la logique métier
+# - data.database pour la connexion à la base de données
+# - ui.students_view pour la page des élèves
 # =============================================================================
 # Ce fichier est utilisé par :
 # - main.py pour créer et afficher la fenêtre principale
 # =============================================================================
+
+import sys
+from pathlib import Path
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le fichier est dans edupaie/ui/, donc edupaie n'est pas dans le path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -16,6 +27,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
+from edupaie.data.database import Database
+from edupaie.services.student_service import StudentService
+from edupaie.ui.students_view import StudentsView
 
 
 class MainWindow(QMainWindow):
@@ -40,6 +54,7 @@ class MainWindow(QMainWindow):
         
         Crée la barre latérale, le stack widget et les pages.
         Configure le style de l'application.
+        Initialise les services pour les pages.
         """
         super().__init__()
         
@@ -47,6 +62,11 @@ class MainWindow(QMainWindow):
         # Pourquoi ces dimensions : Taille raisonnable pour une application desktop
         self.setWindowTitle("EduPaie - Gestion des Paiements Scolaires")
         self.setMinimumSize(1000, 700)
+        
+        # Initialisation des services
+        # Pourquoi : Les services sont partagés entre les pages et doivent être initialisés
+        self.database = Database()
+        self.student_service = StudentService(self.database)
         
         # Création du widget central
         # Pourquoi QWidget central : QMainWindow a un widget central obligatoire
@@ -133,15 +153,17 @@ class MainWindow(QMainWindow):
         """
         Crée les différentes pages de l'application et les ajoute au stack widget.
         
-        Pour l'instant, seules deux pages sont créées avec un contenu placeholder.
-        Les fonctionnalités seront ajoutées dans les commits suivants.
+        Crée :
+        - Page Tableau de bord (placeholder pour l'instant)
+        - Page Élèves (vue complète avec StudentsView)
         """
-        # Page Tableau de bord
+        # Page Tableau de bord (placeholder)
         dashboard_page = self._create_placeholder_page("Tableau de bord")
         self.stack.addWidget(dashboard_page)
         
-        # Page Élèves
-        students_page = self._create_placeholder_page("Élèves")
+        # Page Élèves (vue complète)
+        # Pourquoi StudentsView : Vue complète avec tableau, recherche, filtre et actions CRUD
+        students_page = StudentsView(self.student_service)
         self.stack.addWidget(students_page)
     
     def _create_placeholder_page(self, title: str) -> QWidget:
