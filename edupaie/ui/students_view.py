@@ -61,12 +61,6 @@ class StudentsView(QWidget):
     # Signal émis après un paiement
     # Pourquoi Signal : Permet de notifier le tableau de bord pour rafraîchissement
     payment_made = Signal()
-    - Recherche par texte (nom ou prénom)
-    - Filtre par classe et par statut
-    - Couleurs selon le statut (vert Soldé, orange Partiel, rouge Non payé)
-    - Boutons : Ajouter, Modifier, Supprimer
-    - Actualisation automatique après chaque action
-    """
     
     def __init__(self, student_service: StudentService) -> None:
         """
