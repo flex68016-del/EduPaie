@@ -27,6 +27,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from edupaie.services.student_service import StudentService
+from edupaie.services.payment_service import PaymentService
+from edupaie.ui.payment_dialog import PaymentDialog
 from edupaie.ui.error_handler import handle_slot_errors
 
 
@@ -58,6 +60,7 @@ class StudentDetail(QDialog):
         super().__init__()
         
         self.student_service = student_service
+        self.payment_service = PaymentService(student_service.database)
         self.student_id = student_id
         
         # Configuration de la fenêtre
@@ -173,12 +176,23 @@ class StudentDetail(QDialog):
         # Espaceur
         layout.addStretch()
         
-        # ===== Bouton Fermer =====
+        # ===== Boutons =====
+        buttons_layout = QHBoxLayout()
+        
+        self.btn_new_payment = QPushButton("Nouveau paiement")
+        self.btn_new_payment.setMinimumHeight(35)
+        self.btn_new_payment.setStyleSheet("background-color: #2196F3; color: white;")
+        # Connexion signal -> slot : clic -> ouverture du dialogue de paiement
+        self.btn_new_payment.clicked.connect(self._on_new_payment_clicked)
+        buttons_layout.addWidget(self.btn_new_payment)
+        
         self.btn_close = QPushButton("Fermer")
         self.btn_close.setMinimumHeight(35)
         # Connexion signal -> slot : clic -> fermeture de la fiche
         self.btn_close.clicked.connect(self.accept)
-        layout.addWidget(self.btn_close)
+        buttons_layout.addWidget(self.btn_close)
+        
+        layout.addLayout(buttons_layout)
     
     def _load_student_data(self) -> None:
         """
@@ -248,12 +262,12 @@ class StudentDetail(QDialog):
                 self.paiements_table.setItem(row, 0, date_item)
                 
                 # Montant
-                montant_item = QTableWidgetItem(str(paiement['montant']))
+                montant_item = QTableWidgetItem(f"{paiement['montant']:,}")
                 montant_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.paiements_table.setItem(row, 1, montant_item)
                 
                 # Mode
-                mode_item = QTableWidgetItem(paiement['mode'])
+                mode_item = QTableWidgetItem(paiement['mode'].capitalize())
                 self.paiements_table.setItem(row, 2, mode_item)
                 
                 # Numéro de reçu
@@ -261,7 +275,7 @@ class StudentDetail(QDialog):
                 self.paiements_table.setItem(row, 3, recu_item)
                 
                 # Solde après
-                solde_item = QTableWidgetItem(str(paiement['solde_apres']))
+                solde_item = QTableWidgetItem(f"{paiement['solde_apres']:,}")
                 solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.paiements_table.setItem(row, 4, solde_item)
             
@@ -277,3 +291,32 @@ class StudentDetail(QDialog):
             
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des paiements : {str(e)}")
+    
+    @handle_slot_errors
+    def _on_new_payment_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Nouveau paiement.
+        
+        Ouvre le dialogue de paiement pour enregistrer un nouveau paiement.
+        Si le paiement est enregistré, recharge les données de la fiche.
+        
+        Pourquoi QPushButton.clicked.connect : Permet d'ouvrir le dialogue
+        de paiement par un clic sur le bouton.
+        
+        Pourquoi recharger après paiement : Les données de la fiche doivent
+        refléter le nouveau paiement (solde mis à jour, nouveau paiement dans la liste).
+        """
+        # Ouverture du dialogue de paiement
+        payment_dialog = PaymentDialog(
+            self.payment_service,
+            self.student_service,
+            self.student_id,
+            self
+        )
+        
+        result = payment_dialog.exec()
+        
+        # Si l'utilisateur a validé ( QDialog.Accepted)
+        if result == QDialog.DialogCode.Accepted:
+            # Rechargement des données de la fiche
+            self._load_student_data()
