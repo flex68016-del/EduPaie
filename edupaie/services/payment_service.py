@@ -274,6 +274,39 @@ class PaymentService:
             
             paiement_id = cursor.lastrowid
         
-        # ===== Étape 5 : Retour du paiement créé =====
+        # ===== Étape 7 : Retour du paiement créé =====
         paiement = self.payment_repository.get_by_id(paiement_id)
         return paiement
+    
+    # ===== Section : Historique des paiements =====
+    
+    def historique(self, eleve_id: int) -> list:
+        """
+        Récupère l'historique des paiements d'un élève.
+        
+        Args:
+            eleve_id: Identifiant de l'élève
+        
+        Returns:
+            Liste de dictionnaires contenant les informations des paiements.
+            Chaque dictionnaire contient : id, numero_recu, date_paiement, mode, montant, solde_apres.
+            La liste est triée chronologiquement (du plus ancien au plus récent).
+        
+        Raises:
+            NotFoundError: Si l'élève n'existe pas.
+        
+        Pourquoi cette méthode : Fournit l'historique complet des paiements d'un élève
+        pour l'affichage dans la fiche détaillée ou dans un rapport.
+        
+        Pourquoi NotFoundError : Évite de retourner un historique vide pour un élève
+        qui n'existe pas, ce qui pourrait être confusant pour l'utilisateur.
+        """
+        # Vérification que l'élève existe
+        student = self.student_service.repository.get_by_id(eleve_id)
+        if student is None:
+            raise NotFoundError(f"Aucun élève trouvé avec l'identifiant {eleve_id}.")
+        
+        # Récupération de l'historique via le repository
+        paiements = self.payment_repository.list_by_student(eleve_id)
+        
+        return paiements
