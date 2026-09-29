@@ -502,12 +502,12 @@ class StudentService:
         
         return student
     
-    def get_students_with_solde_and_statut(self, students: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def get_students_with_solde_and_statut(self, students: List[Dict[str, Any]] | None = None) -> List[Dict[str, Any]]:
         """
         Ajoute le solde, le statut, le total payé et le nom de classe à une liste d'élèves.
         
         Args:
-            students: Liste d'élèves (avec id, classe_id)
+            students: Liste d'élèves (avec id, classe_id). Si None, charge tous les élèves via le repository.
         
         Returns:
             Liste d'élèves avec solde, statut, total_paye et nom_classe ajoutés.
@@ -515,7 +515,12 @@ class StudentService:
         
         Pourquoi cette méthode : Transforme une liste d'élèves pour l'affichage
         dans le tableau avec toutes les colonnes nécessaires.
+        Pourquoi paramètre optionnel : Permet à l'UI de ne pas avoir à charger les élèves avant d'appeler cette méthode.
         """
+        # Si students est None, charger tous les élèves depuis le repository
+        if students is None:
+            students = self.repository.list_all()
+        
         result = []
         for student in students:
             student_copy = dict(student)

@@ -27,13 +27,15 @@ from PySide6.QtWidgets import (
     QComboBox, QPushButton, QTableWidget, QTableWidgetItem,
     QHeaderView, QMessageBox
 )
-from PySide6.QtCore import Qt, Signal, Signal
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 from edupaie.ui.student_form import StudentForm
 from edupaie.ui.student_detail import StudentDetail
 from edupaie.ui.error_handler import handle_slot_errors
+from edupaie.ui.theme import STATUS_COLORS
 
 
 class StudentsView(QWidget):
@@ -308,25 +310,23 @@ class StudentsView(QWidget):
             # Statut avec couleur
             statut_item = QTableWidgetItem(student['statut'])
             # Attribution de la couleur selon le statut
-            # Pourquoi ces couleurs : Vert pour soldé (positif), orange pour partiel (attention), rouge pour non payé (alerte)
-            if student['statut'] == "Soldé":
-                statut_item.setBackground(Qt.GlobalColor.lightGreen)
-            elif student['statut'] == "Partiellement payé":
-                statut_item.setBackground(Qt.GlobalColor.yellow)
-            elif student['statut'] == "Non payé":
-                statut_item.setBackground(Qt.GlobalColor.lightRed)
+            # Pourquoi STATUS_COLORS : Couleurs cohérentes définies dans theme.py
+            statut_item.setBackground(STATUS_COLORS.get(student['statut'], QColor(255, 255, 255)))
             self.table.setItem(row, 6, statut_item)
         
         # Réactivation du tri
         self.table.setSortingEnabled(True)
     
     @handle_slot_errors
-    def _on_search_changed(self) -> None:
+    def _on_search_changed(self, texte: str = "") -> None:
         """
         Gère le changement de texte dans le champ de recherche.
         
         Appelé à chaque frappe dans le champ de recherche pour filtrer
         la liste des élèves en temps réel.
+        
+        Args:
+            texte: Le texte saisi dans le champ de recherche (émis par textChanged)
         
         Pourquoi textChanged.connect : Fournit un filtrage instantané sans
         avoir besoin d'appuyer sur un bouton "Rechercher".
@@ -334,11 +334,14 @@ class StudentsView(QWidget):
         self._load_students()
     
     @handle_slot_errors
-    def _on_filter_changed(self) -> None:
+    def _on_filter_changed(self, index: int) -> None:
         """
-        Gère le changement de sélection dans le filtre par classe.
+        Gère le changement de sélection dans le filtre par classe ou statut.
         
-        Appelé quand l'utilisateur change la classe dans le filtre pour
+        Args:
+            index: L'index sélectionné dans le QComboBox (émis par currentIndexChanged)
+        
+        Appelé quand l'utilisateur change la classe ou le statut dans le filtre pour
         mettre à jour la liste des élèves affichés.
         """
         self._load_students()
@@ -476,9 +479,12 @@ class StudentsView(QWidget):
                 QMessageBox.critical(self, "Erreur", f"Erreur lors de la suppression : {str(e)}")
     
     @handle_slot_errors
-    def _on_double_clicked(self) -> None:
+    def _on_double_clicked(self, item: QTableWidgetItem) -> None:
         """
         Gère le double-clic sur une ligne du tableau.
+        
+        Args:
+            item: L'item cliqué (émis par itemDoubleClicked)
         
         Ouvre la fiche détaillée de l'élève sélectionné.
         

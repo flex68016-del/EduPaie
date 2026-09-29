@@ -333,6 +333,47 @@ def test_update_student_not_found(student_service):
     assert "élève" in str(exc_info.value.message).lower() or "identifiant" in str(exc_info.value.message).lower()
 
 
+def test_get_students_with_solde_and_statut_no_param(student_service, sample_student):
+    """
+    Test : Appel de get_students_with_solde_and_statut sans paramètre.
+    
+    Règle vérifiée : La méthode accepte None comme paramètre et charge tous les élèves.
+    
+    Pourquoi ce test : Vérifie que l'UI peut appeler la méthode sans argument.
+    """
+    # Appel comme dans l'UI (dashboard.py)
+    students = student_service.get_students_with_solde_and_statut()
+    
+    # Vérifications
+    assert len(students) > 0
+    assert 'solde' in students[0]
+    assert 'statut' in students[0]
+    assert 'total_paye' in students[0]
+    assert 'nom_classe' in students[0]
+
+
+def test_get_students_with_solde_and_statut_with_param(student_service, sample_student):
+    """
+    Test : Appel de get_students_with_solde_and_statut avec une liste d'élèves.
+    
+    Règle vérifiée : La méthode accepte une liste d'élèves en paramètre.
+    
+    Pourquoi ce test : Vérifie que les appels avec paramètre fonctionnent aussi.
+    """
+    # Récupération des élèves via le repository
+    students_raw = student_service.repository.list_all()
+    
+    # Appel avec paramètre
+    students = student_service.get_students_with_solde_and_statut(students_raw)
+    
+    # Vérifications
+    assert len(students) > 0
+    assert 'solde' in students[0]
+    assert 'statut' in students[0]
+    assert 'total_paye' in students[0]
+    assert 'nom_classe' in students[0]
+
+
 def test_update_student_validation_empty_nom(student_service, sample_student):
     """
     Test : Modification refusée - nom vide.

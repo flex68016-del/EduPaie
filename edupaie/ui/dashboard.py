@@ -25,10 +25,11 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QComboBox, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QColor
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.services.student_service import StudentService
 from edupaie.ui.error_handler import handle_slot_errors
+from edupaie.ui.theme import STATUS_COLORS
 
 
 class Dashboard(QWidget):
@@ -265,18 +266,11 @@ class Dashboard(QWidget):
             self.students_table.setItem(row, 4, paye_item)
             
             # Statut avec couleur
+            # Statut avec couleur
             statut_item = QTableWidgetItem(student['statut'])
             # Attribution de la couleur selon le statut
-            # Pourquoi ces couleurs : Vert pour soldé (positif), orange pour partiel (attention), rouge pour non payé (alerte)
-            if student['statut'] == "Soldé":
-                statut_item.setBackground(Qt.GlobalColor.green)
-                statut_item.setForeground(Qt.GlobalColor.white)
-            elif student['statut'] == "Partiellement payé":
-                statut_item.setBackground(Qt.GlobalColor.yellow)
-                statut_item.setForeground(Qt.GlobalColor.black)
-            elif student['statut'] == "Non payé":
-                statut_item.setBackground(Qt.GlobalColor.red)
-                statut_item.setForeground(Qt.GlobalColor.white)
+            # Pourquoi STATUS_COLORS : Couleurs cohérentes définies dans theme.py
+            statut_item.setBackground(STATUS_COLORS.get(student['statut'], QColor(255, 255, 255)))
             self.students_table.setItem(row, 5, statut_item)
         
         self.students_table.setSortingEnabled(True)
