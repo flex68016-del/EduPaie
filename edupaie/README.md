@@ -20,8 +20,16 @@ pip install -r edupaie/requirements.txt
 
 ## Lancement
 
+Depuis le répertoire racine du projet :
+
 ```bash
 python edupaie/main.py
+```
+
+Ou avec l'environnement virtuel activé :
+
+```bash
+venv/Scripts/python.exe edupaie/main.py
 ```
 
 ## Architecture

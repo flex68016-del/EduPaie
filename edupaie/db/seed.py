@@ -11,7 +11,16 @@
 # =============================================================================
 
 import sqlite3
+import sys
 from pathlib import Path
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le script seed.py est dans edupaie/db/, donc edupaie n'est pas dans le path
+# Path(__file__).parent.parent = edupaie/ (le répertoire contenant le package edupaie)
+# Path(__file__).parent.parent.parent = Projects/EduPaie/ (le répertoire racine du projet)
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from edupaie.utils.paths import user_data_dir
 
 
@@ -45,6 +54,18 @@ def seed_database() -> None:
     
     # Activation des clés étrangères
     cursor.execute("PRAGMA foreign_keys = ON")
+    
+    # Vérification si la base est vide (pas de tables)
+    # Pourquoi : Si c'est la première exécution, il faut d'abord créer le schéma
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='classe'")
+    if cursor.fetchone() is None:
+        # Lecture et exécution du schéma SQL
+        schema_path = Path(__file__).parent / "schema.sql"
+        with open(schema_path, 'r', encoding='utf-8') as f:
+            schema_sql = f.read()
+        cursor.executescript(schema_sql)
+        conn.commit()
+        print("Schéma de base de données initialisé.")
     
     try:
         # =====================================================================

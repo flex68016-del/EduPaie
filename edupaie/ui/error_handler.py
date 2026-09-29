@@ -18,8 +18,15 @@ import sys
 import traceback
 import logging
 from functools import wraps
+from pathlib import Path
 from typing import Callable, Any
 from PySide6.QtWidgets import QMessageBox, QApplication
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le fichier est dans edupaie/ui/, donc edupaie n'est pas dans le path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 
 

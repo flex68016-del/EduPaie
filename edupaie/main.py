@@ -14,6 +14,13 @@
 # =============================================================================
 
 import sys
+from pathlib import Path
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le script main.py est dans edupaie/, donc edupaie n'est pas dans le path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 from PySide6.QtWidgets import QApplication
 from edupaie.ui.main_window import MainWindow
 

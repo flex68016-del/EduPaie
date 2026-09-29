@@ -78,7 +78,7 @@ def user_data_dir() -> Path:
         Le chemin vers le répertoire des données utilisateur.
     
     Example:
-        # Windows : C:\Users\Jean\AppData\Roaming\EduPaie
+        # Windows : C:/Users/Jean/AppData/Roaming/EduPaie
         # Linux : /home/jean/.config/edupaie
         # macOS : /Users/jean/Library/Application Support/EduPaie
     """

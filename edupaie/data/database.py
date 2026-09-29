@@ -11,9 +11,16 @@
 # =============================================================================
 
 import sqlite3
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
+
+# Ajout du répertoire parent au PYTHONPATH pour permettre l'import du module edupaie
+# Pourquoi : Le fichier est dans edupaie/data/, donc edupaie n'est pas dans le path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from edupaie.utils.paths import resource_path, user_data_dir
 
 
