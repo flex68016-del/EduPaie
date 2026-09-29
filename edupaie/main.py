@@ -44,6 +44,12 @@ def main() -> None:
     from edupaie.ui.error_handler import setup_exception_handler
     setup_exception_handler()
     
+    # Initialisation de la base de données au premier lancement
+    # Pourquoi : Copie la base modèle vers le dossier utilisateur si elle n'existe pas
+    # Pourquoi avant MainWindow : La base doit être initialisée avant que l'application ne tente de s'y connecter
+    from edupaie.utils.paths import initialize_database
+    initialize_database()
+    
     # Création et affichage de la fenêtre principale
     window = MainWindow()
     window.show()
