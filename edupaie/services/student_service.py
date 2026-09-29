@@ -5,6 +5,7 @@
 # =============================================================================
 # Ce fichier utilise :
 # - data.student_repository.StudentRepository pour l'accès aux données
+# - data.payment_repository.PaymentRepository pour le calcul du solde
 # - services.exceptions pour les erreurs métier
 # =============================================================================
 # Ce fichier est utilisé par :
@@ -399,7 +400,7 @@ class StudentService:
         """
         Calcule le solde restant d'un élève.
         
-        Règle : solde = total_du - total_payé
+        Règle : solde = total_du - total_paye
         
         Args:
             eleve_id: Identifiant de l'élève
@@ -431,7 +432,6 @@ class StudentService:
         total_paye = self.payment_repository.total_paye(eleve_id)
         
         # Calcul du solde
-        # Pourquoi max(0, ...) : Si total_du = 0, le solde ne peut pas être négatif
         solde = student['total_du'] - total_paye
         
         return solde
@@ -504,22 +504,33 @@ class StudentService:
     
     def get_students_with_solde_and_statut(self, students: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Ajoute le solde et le statut à une liste d'élèves.
+        Ajoute le solde, le statut, le total payé et le nom de classe à une liste d'élèves.
         
         Args:
-            students: Liste d'élèves (avec id)
+            students: Liste d'élèves (avec id, classe_id)
         
         Returns:
-            Liste d'élèves avec solde et statut ajoutés.
+            Liste d'élèves avec solde, statut, total_paye et nom_classe ajoutés.
+            classe_id est remplacé par nom_classe.
         
         Pourquoi cette méthode : Transforme une liste d'élèves pour l'affichage
-        dans le tableau avec les colonnes solde et statut.
+        dans le tableau avec toutes les colonnes nécessaires.
         """
         result = []
         for student in students:
             student_copy = dict(student)
-            student_copy['solde'] = self.solde(student['id'])
+            solde = self.solde(student['id'])
+            total_paye = self.payment_repository.total_paye(student['id'])
+            class_name = self.repository.get_class_name(student.get('classe_id', -1))
+            
+            student_copy['solde'] = solde
             student_copy['statut'] = self.statut(student['id'])
+            student_copy['total_paye'] = total_paye
+            student_copy['nom_classe'] = class_name or "Classe inconnue"
+            
+            if 'classe_id' in student_copy:
+                del student_copy['classe_id']
+            
             result.append(student_copy)
         
         return result
@@ -535,7 +546,7 @@ class StudentService:
             statut: Optionnel, statut pour filtrer ("Soldé", "Non payé", "Partiellement payé")
         
         Returns:
-            Liste d'élèves avec solde et statut, filtrés selon les critères.
+            Liste d'élèves avec solde, statut, total_paye et nom_classe, filtrés selon les critères.
         
         Pourquoi cette méthode : Combine la recherche et le calcul du solde/statut
         pour fournir directement les données prêtes à afficher.
@@ -543,14 +554,11 @@ class StudentService:
         # Recherche des élèves
         students = self.repository.search(texte, classe_id)
         
-        # Ajout du solde et du statut
-        students_with_solde = self.get_students_with_solde_and_statut(students)
-        
-        # Ajout du nom de classe
-        students_final = self.get_students_with_class_names(students_with_solde)
+        # Ajout du solde, du statut, du total_paye et du nom de classe
+        students_enriched = self.get_students_with_solde_and_statut(students)
         
         # Filtrage par statut si spécifié
         if statut:
-            students_final = [s for s in students_final if s['statut'] == statut]
+            students_enriched = [s for s in students_enriched if s['statut'] == stat]
         
-        return students_final
+        return students_enriched
