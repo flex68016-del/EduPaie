@@ -493,5 +493,10 @@ class StudentsView(QWidget):
             detail = StudentDetail(self.student_service, student_id)
             detail.exec()
             
+            # Rechargement de la liste après fermeture de la fiche
+            # Pourquoi : Si un paiement a été enregistré dans la fiche,
+            # la liste doit refléter les nouvelles données (solde, statut)
+            self._load_students()
+            
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture de la fiche : {str(e)}")
