@@ -42,8 +42,8 @@ def resource_path(relative_path: Union[str, Path]) -> Path:
         Le chemin absolu vers la ressource.
     
     Example:
-        # En dev : resource_path("edupaie/db/schema.sql") -> /home/user/edupaie/edupaie/db/schema.sql
-        # Avec PyInstaller : resource_path("edupaie/db/schema.sql") -> /tmp/_MEI123/edupaie/db/schema.sql
+        # En dev : resource_path("db/schema.sql") -> /home/user/edupaie/edupaie/db/schema.sql
+        # Avec PyInstaller : resource_path("db/schema.sql") -> /tmp/_MEI123/edupaie/db/schema.sql
     """
     # Conversion en Path pour une manipulation plus facile
     relative_path = Path(relative_path)
@@ -153,8 +153,8 @@ def initialize_database():
     db_path = user_data_dir() / "edupaie.db"
     
     # Chemin de la base de données modèle (embarquée dans les ressources)
-    # Pourquoi edupaie/edupaie.db : La base modèle est dans le dossier edupaie/ du projet
-    db_model_path = resource_path("edupaie/edupaie.db")
+    # Pourquoi edupaie.db : La base modèle est dans le dossier edupaie/ du projet
+    db_model_path = resource_path("edupaie.db")
     
     # Si la base persistante n'existe pas, copier la base modèle
     if not db_path.exists():
