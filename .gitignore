@@ -1,0 +1,52 @@
+# =============================================================================
+# .gitignore - EduPaie
+# =============================================================================
+# Ce fichier spécifie les fichiers et répertoires à ignorer par Git.
+# =============================================================================
+# Pourquoi ces exclusions :
+# - venv/ : environnement virtuel Python (recréable avec requirements.txt)
+# - __pycache__/ : bytecode Python compilé (recréable automatiquement)
+# - *.pyc : fichiers bytecode Python compilés (recréables automatiquement)
+# - build/, dist/ : artefacts de construction PyInstaller (recréables)
+# - .idea, .vscode : configurations IDE (spécifiques à chaque développeur)
+# - *.spec (sauf edupaie.spec) : fichiers spec PyInstaller temporaires
+# - Base de travail locale : fichier edupaie.db (données de développement)
+# =============================================================================
+
+# Environnement virtuel Python
+venv/
+env/
+ENV/
+
+# Bytecode Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Artefacts de construction PyInstaller
+build/
+dist/
+*.spec
+!edupaie.spec
+
+# Configurations IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Base de données locale (données de développement/test)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Système d'exploitation
+.DS_Store
+Thumbs.db
+
+# PyInstaller
+*.egg-info/
