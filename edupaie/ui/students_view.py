@@ -103,9 +103,9 @@ class StudentsView(QWidget):
         search_label.setStyleSheet("color: black;")
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nom ou prénom...")
-        # Couleur du placeholder plus sombre pour meilleure lisibilité
+        # Couleur du placeholder en noir pour lisibilité
         palette = self.search_input.palette()
-        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(100, 100, 100))
+        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
         self.search_input.setPalette(palette)
         # Connexion signal -> slot : texte changé -> filtrage en temps réel
         # Pourquoi textChanged.connect : Réagit à chaque frappe pour un filtrage instantané

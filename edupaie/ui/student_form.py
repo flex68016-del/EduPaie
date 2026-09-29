@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QComboBox, QSpinBox, QPushButton, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QPalette
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
@@ -102,6 +103,10 @@ class StudentForm(QDialog):
         nom_label.setFixedWidth(100)
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom de famille")
+        # Couleur du placeholder en noir pour lisibilité
+        nom_palette = self.nom_input.palette()
+        nom_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
+        self.nom_input.setPalette(nom_palette)
         nom_layout.addWidget(nom_label)
         nom_layout.addWidget(self.nom_input)
         layout.addLayout(nom_layout)
@@ -112,6 +117,10 @@ class StudentForm(QDialog):
         prenom_label.setFixedWidth(100)
         self.prenom_input = QLineEdit()
         self.prenom_input.setPlaceholderText("Prénom")
+        # Couleur du placeholder en noir pour lisibilité
+        prenom_palette = self.prenom_input.palette()
+        prenom_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
+        self.prenom_input.setPalette(prenom_palette)
         prenom_layout.addWidget(prenom_label)
         prenom_layout.addWidget(self.prenom_input)
         layout.addLayout(prenom_layout)
@@ -134,6 +143,10 @@ class StudentForm(QDialog):
         self.annee_input = QLineEdit()
         self.annee_input.setPlaceholderText("2024-2025")
         self.annee_input.setInputMask("9999-9999")  # Masque de saisie
+        # Couleur du placeholder en noir pour lisibilité
+        annee_palette = self.annee_input.palette()
+        annee_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
+        self.annee_input.setPalette(annee_palette)
         annee_layout.addWidget(annee_label)
         annee_layout.addWidget(self.annee_input)
         layout.addLayout(annee_layout)
