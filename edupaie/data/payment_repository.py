@@ -109,9 +109,9 @@ class PaymentRepository:
             result = cursor.fetchone()
             return result['nombre'] if result else 0
     
-    def get_paiements_by_eleve(self, eleve_id: int) -> list:
+    def list_by_student(self, eleve_id: int) -> list:
         """
-        Récupère la liste des paiements d'un élève.
+        Récupère la liste chronologique des paiements d'un élève.
         
         Args:
             eleve_id: Identifiant de l'élève
@@ -119,21 +119,25 @@ class PaymentRepository:
         Returns:
             Liste de dictionnaires contenant les informations des paiements.
             Chaque dictionnaire contient : id, montant, date_paiement, mode, numero_recu, solde_apres.
+            La liste est triée par date croissante puis par ID croissant.
         
-        Pourquoi cette méthode : Permet d'afficher l'historique des paiements
-        dans la fiche détaillée de l'élève.
+        Pourquoi cette méthode : Permet d'afficher l'historique chronologique
+        des paiements dans l'ordre où ils ont été effectués.
         
-        Pourquoi ORDER BY date_paiement DESC : Affiche les paiements du plus
-        récent au plus ancien, ce qui est plus pertinent pour l'utilisateur.
+        Pourquoi ORDER BY date_paiement ASC, id ASC : Trie d'abord par date (du plus
+        ancien au plus récent) pour voir l'évolution chronologique, puis par ID pour
+        garantir un ordre stable si plusieurs paiements ont été effectués le même jour.
+        L'ID est incrémenté séquentiellement, donc trier par ID après la date garantit
+        que les paiements du même jour sont dans l'ordre de création.
         """
         with self.database.transaction() as cursor:
-            # Requête SQL : sélection des paiements de l'élève
+            # Requête SQL : sélection des paiements de l'élève triés chronologiquement
             # Pourquoi le paramètre "?" : Protection contre les injections SQL
             cursor.execute(
                 """SELECT id, montant, date_paiement, mode, numero_recu, solde_apres
                    FROM paiement
                    WHERE eleve_id = ?
-                   ORDER BY date_paiement DESC""",
+                   ORDER BY date_paiement ASC, id ASC""",
                 (eleve_id,)
             )
             
