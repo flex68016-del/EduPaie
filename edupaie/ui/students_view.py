@@ -119,8 +119,11 @@ class StudentsView(QWidget):
         classe_label.setStyleSheet("color: black;")
         self.classe_filter = QComboBox()
         self._load_classes_filter()
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.classe_filter.setStyleSheet("color: black;")
+        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        self.classe_filter.setStyleSheet("""
+            QComboBox { color: black; }
+            QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
+        """)
         # Connexion signal -> slot : sélection changée -> filtrage
         self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(classe_label)
@@ -131,8 +134,11 @@ class StudentsView(QWidget):
         statut_label.setStyleSheet("color: black;")
         self.statut_filter = QComboBox()
         self._load_statut_filter()
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.statut_filter.setStyleSheet("color: black;")
+        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        self.statut_filter.setStyleSheet("""
+            QComboBox { color: black; }
+            QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
+        """)
         # Connexion signal -> slot : sélection changée -> filtrage
         self.statut_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(statut_label)

@@ -134,8 +134,11 @@ class StudentForm(QDialog):
         classe_label.setFixedWidth(100)
         self.classe_combo = QComboBox()
         self._load_classes()
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.classe_combo.setStyleSheet("color: black;")
+        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        self.classe_combo.setStyleSheet("""
+            QComboBox { color: black; }
+            QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
+        """)
         classe_layout.addWidget(classe_label)
         classe_layout.addWidget(self.classe_combo)
         layout.addLayout(classe_layout)
