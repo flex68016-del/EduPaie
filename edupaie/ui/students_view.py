@@ -230,10 +230,10 @@ class StudentsView(QWidget):
         self.btn_delete = QPushButton("Supprimer")
         self.btn_delete.setMinimumHeight(35)
         self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Bouton rouge pour supprimer
+        # Bouton bleu pour supprimer
         self.btn_delete.setStyleSheet("""
             QPushButton {
-                background-color: #f44336;
+                background-color: #2196F3;
                 color: white;
                 border: none;
                 border-radius: 5px;
@@ -241,10 +241,10 @@ class StudentsView(QWidget):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #da190b;
+                background-color: #0b7dda;
             }
             QPushButton:pressed {
-                background-color: #b71c1c;
+                background-color: #0a5f8f;
             }
             QPushButton:disabled {
                 background-color: #cccccc;
