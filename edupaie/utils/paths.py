@@ -184,7 +184,8 @@ def initialize_database():
                     schema_sql = f.read()
                 
                 # Création de la base avec le schema
-                Database(str(db_path)).initialize_schema_from_string(schema_sql)
+                # Pourquoi connect() : Établit la connexion et initialise le schéma si vide
+                Database(str(db_path)).connect()
             else:
                 # Fallback : créer une base vide avec connect() qui utilisera le schema interne
                 Database(str(db_path)).connect()
