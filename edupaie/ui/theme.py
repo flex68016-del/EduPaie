@@ -442,4 +442,66 @@ def build_stylesheet() -> str:
         padding: 2px 8px;
         border-radius: 4px;
     }}
+    
+    /* ===== Cartes KPI ===== */
+    QFrame[card_type="kpi"] {{
+        background: {SURFACE};
+        border: 1px solid {BORDER};
+        border-radius: 10px;
+        padding: 15px;
+    }}
+    
+    QLabel[label_type="kpi_title"] {{
+        color: {TEXT_MUTED};
+        font-size: 12pt;
+    }}
+    
+    QLabel[label_type="kpi_value"] {{
+        color: {TEXT};
+        font-size: 22pt;
+        font-weight: bold;
+    }}
+    
+    /* ===== Barre latérale ===== */
+    QWidget#sidebar {{
+        background: {SIDEBAR};
+    }}
+    
+    QWidget#sidebar QPushButton {{
+        background: transparent;
+        color: white;
+        border: none;
+        text-align: left;
+        padding: 10px 15px;
+        border-radius: 6px;
+    }}
+    
+    QWidget#sidebar QPushButton:hover {{
+        background: {SIDEBAR_HOVER};
+    }}
+    
+    QWidget#sidebar QPushButton[active="true"] {{
+        background: {PRIMARY};
+    }}
+    
+    QWidget#sidebar QLabel#sidebar_title {{
+        color: white;
+        font-size: 16pt;
+        font-weight: bold;
+        padding: 15px;
+    }}
+    
+    /* ===== Labels de statut ===== */
+    QLabel[statut_bg] {{
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+    }}
+    
+    /* ===== Labels avec setProperty dynamique ===== */
+    QLabel[hasDynamicStyle="true"] {{
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+    }}
     """

@@ -25,11 +25,11 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QComboBox, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QColor, QPalette
+from PySide6.QtGui import QFont, QColor
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.services.student_service import StudentService
 from edupaie.ui.error_handler import handle_slot_errors
-from edupaie.ui.theme import STATUS_COLORS
+from edupaie.ui.theme import STATUS, format_fcfa, TEXT, TEXT_MUTED
 
 
 class Dashboard(QWidget):
@@ -84,40 +84,36 @@ class Dashboard(QWidget):
         
         # ===== Section : Cartes KPI =====
         kpi_layout = QHBoxLayout()
+        kpi_layout.setSpacing(12)
         
-        # Carte 1 : Nombre d'élèves
-        self.card_eleves = self._create_kpi_card("Nombre d'élèves", "0", "#2196F3")
+        # Carte 1 : Nombre d'élèves (bleu)
+        self.card_eleves = self._create_kpi_card("Élèves", "0", "#2563EB")
         kpi_layout.addWidget(self.card_eleves)
         
-        # Carte 2 : Total encaissé
-        self.card_encaisse = self._create_kpi_card("Total encaissé", "0 FCFA", "#4CAF50")
+        # Carte 2 : Total encaissé (vert)
+        self.card_encaisse = self._create_kpi_card("Encaissé", "0 FCFA", "#16A34A")
         kpi_layout.addWidget(self.card_encaisse)
         
-        # Carte 3 : Total restant dû
-        self.card_restant = self._create_kpi_card("Total restant dû", "0 FCFA", "#FF9800")
+        # Carte 3 : Restant dû (orange)
+        self.card_restant = self._create_kpi_card("Restant dû", "0 FCFA", "#D97706")
         kpi_layout.addWidget(self.card_restant)
         
-        # Carte 4 : Élèves non soldés
-        self.card_non_soldes = self._create_kpi_card("Élèves non soldés", "0", "#F44336")
+        # Carte 4 : Élèves non soldés (rouge)
+        self.card_non_soldes = self._create_kpi_card("Non soldés", "0", "#DC2626")
         kpi_layout.addWidget(self.card_non_soldes)
         
         layout.addLayout(kpi_layout)
         
         # ===== Section : Filtre par statut =====
         filter_layout = QHBoxLayout()
+        filter_layout.setContentsMargins(20, 10, 20, 10)
         
         filter_label = QLabel("Filtrer par statut :")
-        filter_label.setStyleSheet("font-weight: bold; color: white;")
+        filter_label.setProperty("isFilter", True)
         filter_layout.addWidget(filter_label)
         
         self.statut_filter = QComboBox()
         self.statut_filter.addItems(["Tous", "Soldé", "Partiellement payé", "Non payé"])
-        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
-        self.statut_filter.setStyleSheet("""
-            QComboBox { color: white; }
-            QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
-        """)
-        # Connexion signal -> slot : changement de filtre -> rafraîchissement du tableau
         self.statut_filter.currentTextChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(self.statut_filter)
         
@@ -136,6 +132,12 @@ class Dashboard(QWidget):
         self.students_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.students_table.setAlternatingRowColors(True)
         self.students_table.setSortingEnabled(True)
+        
+        # Masquer les numéros de ligne
+        self.students_table.verticalHeader().setVisible(False)
+        
+        # Définir la hauteur des lignes
+        self.students_table.verticalHeader().setDefaultSectionSize(36)
         
         # Ajustement des colonnes
         header = self.students_table.horizontalHeader()
@@ -166,26 +168,17 @@ class Dashboard(QWidget):
         et fond personnalisés pour mettre en valeur les KPI.
         """
         card = QFrame()
-        card.setStyleSheet(f"""
-            QFrame {{
-                background-color: {color};
-                border-radius: 10px;
-                padding: 15px;
-            }}
-            QLabel {{
-                color: white;
-                background-color: transparent;
-            }}
-        """)
+        card.setProperty("card_type", "kpi")
+        card.setProperty("border_color", color)
         
         layout = QVBoxLayout()
         
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 12px;")
+        title_label.setProperty("label_type", "kpi_title")
         layout.addWidget(title_label)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        value_label.setProperty("label_type", "kpi_value")
         layout.addWidget(value_label)
         
         card.setLayout(layout)
@@ -212,8 +205,8 @@ class Dashboard(QWidget):
         
         # Mise à jour des cartes KPI
         self.card_eleves.value_label.setText(str(stats['nombre_eleves']))
-        self.card_encaisse.value_label.setText(f"{stats['total_encaisse']:,} FCFA")
-        self.card_restant.value_label.setText(f"{stats['total_restant_du']:,} FCFA")
+        self.card_encaisse.value_label.setText(format_fcfa(stats['total_encaisse']))
+        self.card_restant.value_label.setText(format_fcfa(stats['total_restant_du']))
         self.card_non_soldes.value_label.setText(str(stats['eleves_non_soldes']))
         
         # Chargement de la liste des élèves
@@ -260,22 +253,26 @@ class Dashboard(QWidget):
             self.students_table.setItem(row, 2, classe_item)
             
             # Total dû
-            total_du_item = QTableWidgetItem(f"{student['total_du']:,}")
+            total_du_item = QTableWidgetItem(format_fcfa(student['total_du']))
             total_du_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.students_table.setItem(row, 3, total_du_item)
             
             # Payé
             total_paye = student['total_du'] - student['solde']
-            paye_item = QTableWidgetItem(f"{total_paye:,}")
+            paye_item = QTableWidgetItem(format_fcfa(total_paye))
             paye_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.students_table.setItem(row, 4, paye_item)
             
-            # Statut avec couleur
-            # Statut avec couleur
-            statut_item = QTableWidgetItem(student['statut'])
-            # Attribution de la couleur selon le statut
-            # Pourquoi STATUS_COLORS : Couleurs cohérentes définies dans theme.py
-            statut_item.setBackground(STATUS_COLORS.get(student['statut'], QColor(255, 255, 255)))
+            # Statut avec couleur (fond ET texte pour contraste WCAG)
+            statut = student['statut']
+            statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
+            statut_item = QTableWidgetItem(statut)
+            statut_item.setBackground(QColor(statut_colors["bg"]))
+            statut_item.setForeground(QColor(statut_colors["fg"]))
+            statut_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+            font = statut_item.font()
+            font.setBold(True)
+            statut_item.setFont(font)
             self.students_table.setItem(row, 5, statut_item)
         
         self.students_table.setSortingEnabled(True)

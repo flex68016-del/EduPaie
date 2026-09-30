@@ -370,25 +370,23 @@ class PaymentDialog(QDialog):
         layout = QVBoxLayout()
         
         label = QLabel("Voulez-vous générer le reçu de paiement ?")
-        label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(label)
         
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
         
         btn_save_pdf = QPushButton("Enregistrer le PDF")
-        btn_save_pdf.setMinimumHeight(35)
-        btn_save_pdf.setStyleSheet("background-color: #2196F3; color: white;")
+        btn_save_pdf.setProperty("variant", "primary")
         btn_save_pdf.clicked.connect(lambda: self._enregistrer_pdf(dialog))
         buttons_layout.addWidget(btn_save_pdf)
         
         btn_print = QPushButton("Imprimer")
-        btn_print.setMinimumHeight(35)
-        btn_print.setStyleSheet("background-color: #FF9800; color: white;")
+        btn_print.setProperty("variant", "secondary")
         btn_print.clicked.connect(lambda: self._imprimer_recu(dialog))
         buttons_layout.addWidget(btn_print)
         
         btn_skip = QPushButton("Passer")
-        btn_skip.setMinimumHeight(35)
+        btn_skip.setProperty("variant", "secondary")
         btn_skip.clicked.connect(dialog.accept)
         buttons_layout.addWidget(btn_skip)
         
