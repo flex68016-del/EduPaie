@@ -116,14 +116,17 @@ class MainWindow(QMainWindow):
         sidebar_layout.setContentsMargins(10, 20, 10, 20)
         sidebar_layout.setSpacing(10)
         
-        # Logo de l'application
-        logo_label = QLabel()
-        logo_path = resource_path("edupaie/assets/edupaie-logo.svg")
-        logo_pixmap = QPixmap(str(logo_path))
-        logo_pixmap = logo_pixmap.scaled(180, 60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        logo_label.setPixmap(logo_pixmap)
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sidebar_layout.addWidget(logo_label)
+        # Titre de l'application (fallback si le logo SVG ne charge pas)
+        # Note : Le logo SVG est inclus mais QPixmap peut ne pas charger les SVG
+        # sans le plugin Qt SVG. Pour l'instant, on utilise le texte.
+        title_label = QLabel("EduPaie")
+        title_label.setObjectName("sidebarTitle")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_font = QFont()
+        title_font.setPointSize(18)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        sidebar_layout.addWidget(title_label)
         
         # Séparateur
         separator = QFrame()
