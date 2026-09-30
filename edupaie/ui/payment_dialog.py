@@ -146,10 +146,11 @@ class PaymentDialog(QDialog):
         montant_label.setMinimumWidth(120)
         self.montant_input = QLineEdit()
         self.montant_input.setPlaceholderText("Ex: 10000")
-        # Couleur du placeholder et du texte en noir pour lisibilité
+        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
+        self.montant_input.setStyleSheet("color: white; background-color: #3d566e;")
         montant_palette = self.montant_input.palette()
         montant_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        montant_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        montant_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
         self.montant_input.setPalette(montant_palette)
         # QIntValidator : n'accepte que des entiers
         # Pourquoi QIntValidator : Empêche l'utilisateur de saisir des lettres ou des décimales

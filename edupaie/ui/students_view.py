@@ -100,13 +100,14 @@ class StudentsView(QWidget):
         
         # Champ de recherche
         search_label = QLabel("Rechercher :")
-        search_label.setStyleSheet("color: black;")
+        search_label.setStyleSheet("color: white;")
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nom ou prénom...")
-        # Couleur du placeholder et du texte en noir pour lisibilité
+        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
+        self.search_input.setStyleSheet("color: white; background-color: #3d566e;")
         palette = self.search_input.palette()
         palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
         self.search_input.setPalette(palette)
         # Connexion signal -> slot : texte changé -> filtrage en temps réel
         # Pourquoi textChanged.connect : Réagit à chaque frappe pour un filtrage instantané
@@ -116,12 +117,12 @@ class StudentsView(QWidget):
         
         # Filtre par classe
         classe_label = QLabel("Classe :")
-        classe_label.setStyleSheet("color: black;")
+        classe_label.setStyleSheet("color: white;")
         self.classe_filter = QComboBox()
         self._load_classes_filter()
-        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
         self.classe_filter.setStyleSheet("""
-            QComboBox { color: black; }
+            QComboBox { color: white; }
             QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
         """)
         # Connexion signal -> slot : sélection changée -> filtrage
@@ -131,12 +132,12 @@ class StudentsView(QWidget):
         
         # Filtre par statut
         statut_label = QLabel("Statut :")
-        statut_label.setStyleSheet("color: black;")
+        statut_label.setStyleSheet("color: white;")
         self.statut_filter = QComboBox()
         self._load_statut_filter()
-        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
         self.statut_filter.setStyleSheet("""
-            QComboBox { color: black; }
+            QComboBox { color: white; }
             QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
         """)
         # Connexion signal -> slot : sélection changée -> filtrage
@@ -179,24 +180,24 @@ class StudentsView(QWidget):
         
         self.btn_add = QPushButton("Ajouter")
         self.btn_add.setMinimumHeight(35)
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.btn_add.setStyleSheet("color: black;")
+        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
+        self.btn_add.setStyleSheet("color: white;")
         # Connexion signal -> slot : clic -> ouverture formulaire d'ajout
         self.btn_add.clicked.connect(self._on_add_clicked)
         
         self.btn_edit = QPushButton("Modifier")
         self.btn_edit.setMinimumHeight(35)
         self.btn_edit.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.btn_edit.setStyleSheet("color: black;")
+        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
+        self.btn_edit.setStyleSheet("color: white;")
         # Connexion signal -> slot : clic -> ouverture formulaire de modification
         self.btn_edit.clicked.connect(self._on_edit_clicked)
         
         self.btn_delete = QPushButton("Supprimer")
         self.btn_delete.setMinimumHeight(35)
         self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.btn_delete.setStyleSheet("color: black;")
+        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
+        self.btn_delete.setStyleSheet("color: white;")
         # Connexion signal -> slot : clic -> suppression de l'élève sélectionné
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         

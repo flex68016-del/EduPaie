@@ -103,10 +103,11 @@ class StudentForm(QDialog):
         nom_label.setFixedWidth(100)
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom de famille")
-        # Couleur du placeholder et du texte en noir pour lisibilité
+        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
+        self.nom_input.setStyleSheet("color: white; background-color: #3d566e;")
         nom_palette = self.nom_input.palette()
         nom_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        nom_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        nom_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
         self.nom_input.setPalette(nom_palette)
         nom_layout.addWidget(nom_label)
         nom_layout.addWidget(self.nom_input)
@@ -118,10 +119,11 @@ class StudentForm(QDialog):
         prenom_label.setFixedWidth(100)
         self.prenom_input = QLineEdit()
         self.prenom_input.setPlaceholderText("Prénom")
-        # Couleur du placeholder et du texte en noir pour lisibilité
+        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
+        self.prenom_input.setStyleSheet("color: white; background-color: #3d566e;")
         prenom_palette = self.prenom_input.palette()
         prenom_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        prenom_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        prenom_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
         self.prenom_input.setPalette(prenom_palette)
         prenom_layout.addWidget(prenom_label)
         prenom_layout.addWidget(self.prenom_input)
@@ -134,9 +136,9 @@ class StudentForm(QDialog):
         classe_label.setFixedWidth(100)
         self.classe_combo = QComboBox()
         self._load_classes()
-        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
         self.classe_combo.setStyleSheet("""
-            QComboBox { color: black; }
+            QComboBox { color: white; }
             QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
         """)
         classe_layout.addWidget(classe_label)
@@ -150,10 +152,11 @@ class StudentForm(QDialog):
         self.annee_input = QLineEdit()
         self.annee_input.setPlaceholderText("2024-2025")
         self.annee_input.setInputMask("9999-9999")  # Masque de saisie
-        # Couleur du placeholder et du texte en noir pour lisibilité
+        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
+        self.annee_input.setStyleSheet("color: white; background-color: #3d566e;")
         annee_palette = self.annee_input.palette()
         annee_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        annee_palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+        annee_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
         self.annee_input.setPalette(annee_palette)
         annee_layout.addWidget(annee_label)
         annee_layout.addWidget(self.annee_input)
@@ -169,6 +172,11 @@ class StudentForm(QDialog):
         self.total_input.setMaximum(1000000)  # Maximum 1 000 000 FCFA
         self.total_input.setSingleStep(1000)  # Pas de 1000 FCFA
         self.total_input.setValue(50000)  # Valeur par défaut
+        # Couleur du texte en blanc, fond sombre pour lisibilité
+        self.total_input.setStyleSheet("color: white; background-color: #3d566e;")
+        total_palette = self.total_input.palette()
+        total_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
+        self.total_input.setPalette(total_palette)
         total_layout.addWidget(total_label)
         total_layout.addWidget(self.total_input)
         layout.addLayout(total_layout)
@@ -183,16 +191,16 @@ class StudentForm(QDialog):
             "Modifier" if self.is_edit_mode else "Créer"
         )
         self.btn_validate.setMinimumHeight(35)
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.btn_validate.setStyleSheet("color: black;")
+        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
+        self.btn_validate.setStyleSheet("color: white;")
         # Connexion signal -> slot : clic bouton -> validation du formulaire
         # Pourquoi clicked.connect : Mécanisme signal/slot de Qt pour réagir aux événements
         self.btn_validate.clicked.connect(self._on_validate)
         
         self.btn_cancel = QPushButton("Annuler")
         self.btn_cancel.setMinimumHeight(35)
-        # Couleur du texte en noir pour lisibilité (override stylesheet global)
-        self.btn_cancel.setStyleSheet("color: black;")
+        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
+        self.btn_cancel.setStyleSheet("color: white;")
         # Connexion signal -> slot : clic bouton -> fermeture du formulaire sans sauvegarder
         self.btn_cancel.clicked.connect(self.reject)
         

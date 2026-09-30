@@ -107,14 +107,14 @@ class Dashboard(QWidget):
         filter_layout = QHBoxLayout()
         
         filter_label = QLabel("Filtrer par statut :")
-        filter_label.setStyleSheet("font-weight: bold; color: black;")
+        filter_label.setStyleSheet("font-weight: bold; color: white;")
         filter_layout.addWidget(filter_label)
         
         self.statut_filter = QComboBox()
         self.statut_filter.addItems(["Tous", "Soldé", "Partiellement payé", "Non payé"])
-        # Couleur du texte : noir quand fermé, blanc dans la liste déroulante
+        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
         self.statut_filter.setStyleSheet("""
-            QComboBox { color: black; }
+            QComboBox { color: white; }
             QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
         """)
         # Connexion signal -> slot : changement de filtre -> rafraîchissement du tableau
