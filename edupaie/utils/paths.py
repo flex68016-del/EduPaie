@@ -180,22 +180,35 @@ def initialize_database():
     
     # Si la base persistante n'existe pas, l'initialiser
     if not db_path.exists():
+        print(f"[INFO] Base persistante non trouvée : {db_path}")
+        print(f"[INFO] Recherche base modèle : {db_model_path}")
+        print(f"[INFO] Base modèle existe : {db_model_path.exists()}")
+        
         if db_model_path.exists():
             # Copie de la base modèle vers le dossier utilisateur
+            print(f"[INFO] Copie de la base modèle vers {db_path}")
             shutil.copy2(db_model_path, db_path)
+            print(f"[INFO] Base modèle copiée avec succès")
         else:
             # Si la base modèle n'existe pas, créer une base vide via schema.sql
             # Pourquoi lire le schema.sql : Le schema est nécessaire pour créer les tables
+            print(f"[INFO] Base modèle non trouvée, création via schema.sql")
             if schema_path.exists():
                 with open(schema_path, 'r', encoding='utf-8') as f:
                     schema_sql = f.read()
                 
                 # Création de la base avec le schema
                 # Pourquoi connect() : Établit la connexion et initialise le schéma si vide
+                print(f"[INFO] Initialisation de la base avec schema.sql")
                 Database(str(db_path)).connect()
+                print(f"[INFO] Base initialisée avec succès")
             else:
                 # Fallback : créer une base vide avec connect() qui utilisera le schema interne
+                print(f"[INFO] Schema non trouvé, création base vide")
                 Database(str(db_path)).connect()
+                print(f"[INFO] Base vide créée")
+    else:
+        print(f"[INFO] Base persistante trouvée : {db_path}")
     
     # Configuration du logging pour écrire dans le dossier utilisateur
     # Pourquoi logging : Permet de tracer les erreurs et le comportement de l'application
