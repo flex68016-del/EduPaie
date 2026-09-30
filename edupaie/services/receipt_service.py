@@ -109,55 +109,93 @@ class ReceiptService:
         # Création du PDF
         pdf = FPDF()
         pdf.add_page()
-        
-        # ===== En-tête de l'établissement =====
-        # Pourquoi Arial 16, gras : Titre principal visible et professionnel
+
+        # ===== En-tête avec fond coloré =====
+        pdf.set_fill_color(44, 62, 80)  # Fond bleu foncé (#2c3e50)
+        pdf.rect(0, 0, 210, 40, "F")  # Rectangle plein
+        pdf.set_text_color(255, 255, 255)  # Texte blanc
+
+        # Titre de l'établissement
+        pdf.set_font("Arial", "B", 20)
+        pdf.cell(0, 15, "EDUPAIE", ln=True, align="C")
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, "Système de Gestion des Paiements Scolaires", ln=True, align="C")
+        pdf.ln(5)
+
+        # Numéro de reçu
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, f"REÇU DE PAIEMENT", ln=True, align="C")
+        pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 8, f"Numéro : {paiement['numero_recu']}", ln=True, align="C")
+
+        # Réinitialisation du texte en noir
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(15)
+
+        # ===== Cadre pour informations de l'élève =====
+        pdf.set_fill_color(240, 244, 248)  # Fond gris clair (#f0f4f8)
+        pdf.rect(10, pdf.get_y(), 190, 45, "F")
+        pdf.set_xy(15, pdf.get_y() + 5)
+
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(44, 62, 80)  # Titre en bleu foncé
+        pdf.cell(0, 8, "INFORMATIONS DE L'ÉLÈVE", ln=True)
+        pdf.set_text_color(0, 0, 0)  # Texte en noir
+        pdf.ln(3)
+
+        pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 7, f"Nom : {eleve['nom']}", ln=True)
+        pdf.cell(0, 7, f"Prénom : {eleve['prenom']}", ln=True)
+        pdf.cell(0, 7, f"Classe : {classe_nom}", ln=True)
+        pdf.cell(0, 7, f"Année scolaire : {eleve['annee_scolaire']}", ln=True)
+        pdf.ln(10)
+
+        # ===== Cadre pour détails du paiement =====
+        pdf.set_fill_color(240, 244, 248)  # Fond gris clair (#f0f4f8)
+        pdf.rect(10, pdf.get_y(), 190, 55, "F")
+        pdf.set_xy(15, pdf.get_y() + 5)
+
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(44, 62, 80)  # Titre en bleu foncé
+        pdf.cell(0, 8, "DÉTAILS DU PAIEMENT", ln=True)
+        pdf.set_text_color(0, 0, 0)  # Texte en noir
+        pdf.ln(3)
+
+        # Montant en évidence avec fond vert
+        pdf.set_fill_color(76, 175, 80)  # Fond vert (#4caf50)
+        pdf.set_text_color(255, 255, 255)  # Texte blanc
         pdf.set_font("Arial", "B", 16)
-        pdf.cell(0, 10, "ÉCOLE - REÇU DE PAIEMENT", ln=True, align="C")
+        pdf.cell(0, 12, f"Montant : {paiement['montant']:,} FCFA", ln=True, fill=True)
         pdf.ln(5)
-        
-        # ===== Numéro de reçu =====
-        # Pourquoi Arial 12, gras : Identifiant important du document
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Numéro de reçu : {paiement['numero_recu']}", ln=True, align="C")
-        pdf.ln(10)
-        
-        # ===== Informations de l'élève =====
-        # Pourquoi Arial 11 : Lisibilité standard pour les informations
+
+        pdf.set_text_color(0, 0, 0)  # Texte en noir
         pdf.set_font("Arial", "", 11)
-        pdf.cell(0, 8, f"Élève : {eleve['nom']} {eleve['prenom']}", ln=True)
-        pdf.cell(0, 8, f"Classe : {classe_nom}", ln=True)
-        pdf.cell(0, 8, f"Année scolaire : {eleve['annee_scolaire']}", ln=True)
-        pdf.ln(10)
-        
-        # ===== Séparateur =====
-        # Pourquoi ligne horizontale : Séparation visuelle entre infos élève et paiement
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(10)
-        
-        # ===== Détails du paiement =====
-        # Pourquoi Arial 12, gras : Montant principal en évidence
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Montant payé : {paiement['montant']:,} FCFA", ln=True)
-        
-        # Pourquoi Arial 11 : Détails secondaires
-        pdf.set_font("Arial", "", 11)
-        pdf.cell(0, 8, f"Date : {paiement['date_paiement']}", ln=True)
-        pdf.cell(0, 8, f"Mode de paiement : {paiement['mode'].capitalize()}", ln=True)
+        pdf.cell(0, 7, f"Date : {paiement['date_paiement']}", ln=True)
+        pdf.cell(0, 7, f"Mode : {paiement['mode'].replace('_', ' ').title()}", ln=True)
         pdf.ln(5)
-        
-        # ===== Solde après paiement =====
-        # Pourquoi Arial 12, gras : Information financière importante
+
+        # Solde avec couleur selon le statut
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Solde après paiement : {paiement['solde_apres']:,} FCFA", ln=True)
-        pdf.ln(10)
-        
+        if paiement['solde_apres'] == 0:
+            pdf.set_text_color(76, 175, 80)  # Vert (#4caf50)
+            statut_text = "SOLDÉ"
+        elif paiement['solde_apres'] > 0:
+            pdf.set_text_color(255, 152, 0)  # Orange (#ff9800)
+            statut_text = "RESTE À PAYER"
+        else:
+            pdf.set_text_color(244, 67, 54)  # Rouge (#f44336)
+            statut_text = "ERREUR"
+
+        pdf.cell(0, 8, f"Solde après paiement : {paiement['solde_apres']:,} FCFA ({statut_text})", ln=True)
+        pdf.set_text_color(0, 0, 0)  # Réinitialisation
+        pdf.ln(15)
+
         # ===== Pied de page =====
-        # Pourquoi position bas, Arial 8 : Mentions légales discrètes
         pdf.set_y(-30)
-        pdf.set_font("Arial", "I", 8)
-        pdf.cell(0, 10, "Document généré automatiquement par EduPaie", ln=True, align="C")
-        pdf.cell(0, 10, "Ce document fait foi de paiement", ln=True, align="C")
+        pdf.set_font("Arial", "I", 9)
+        pdf.set_text_color(128, 128, 128)  # Gris (#808080)
+        pdf.cell(0, 8, "Ce document fait foi de paiement", ln=True, align="C")
+        pdf.cell(0, 8, "Généré automatiquement par EduPaie - " + paiement['date_paiement'], ln=True, align="C")
         
         # Sauvegarde du PDF
         pdf.output(chemin_sortie)
