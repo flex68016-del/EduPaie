@@ -116,6 +116,10 @@ class Database:
             FileNotFoundError: Si le fichier schema.sql n'existe pas.
             sqlite3.Error: Si l'exécution du schéma échoue.
         """
+        # Vérification que la connexion est établie
+        if self._connection is None:
+            raise RuntimeError("La connexion à la base de données n'est pas établie")
+        
         # Lecture du fichier schema.sql
         # Pourquoi : Le schéma est défini dans un fichier SQL séparé pour plus de clarté
         if not self._schema_path.exists():
@@ -146,6 +150,10 @@ class Database:
         Raises:
             sqlite3.Error: Si l'exécution du schéma échoue.
         """
+        # Vérification que la connexion est établie
+        if self._connection is None:
+            raise RuntimeError("La connexion à la base de données n'est pas établie")
+        
         # Exécution du script SQL
         # Pourquoi executescript : Permet d'exécuter plusieurs instructions SQL
         self._connection.executescript(schema_sql)
