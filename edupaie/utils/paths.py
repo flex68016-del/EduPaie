@@ -168,7 +168,7 @@ def initialize_database():
     # Avec PyInstaller : edupaie/edupaie.db (inclus dans le .spec)
     if hasattr(sys, '_MEIPASS'):
         # Cas PyInstaller : le chemin est sys._MEIPASS/edupaie/edupaie.db
-        db_model_path = resource_path("edupaie/edupaie.db")
+        db_model_path = Path(sys._MEIPASS) / "edupaie" / "edupaie.db"
     else:
         # Cas développement : le chemin est edupaie/edupaie.db par rapport au package
         # __file__ est edupaie/utils/paths.py, donc parent.parent est edupaie/
