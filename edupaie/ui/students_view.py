@@ -524,6 +524,9 @@ class StudentsView(QWidget):
         # Ouverture de la fiche détaillée
         try:
             detail = StudentDetail(self.student_service, student_id)
+            # Connexion du signal payment_made de la fiche vers le signal local
+            # Pourquoi : Quand un paiement est enregistré dans la fiche, le tableau de bord doit se rafraîchir
+            detail.payment_made.connect(self.payment_made.emit)
             detail.exec()
             
             # Rechargement de la liste après fermeture de la fiche
