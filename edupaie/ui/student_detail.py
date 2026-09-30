@@ -25,13 +25,14 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
     QFileDialog
 )
-from PySide6.QtCore import Qt, Signal, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QColor
 from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
 from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.payment_dialog import PaymentDialog
 from edupaie.ui.error_handler import handle_slot_errors
+from edupaie.ui.theme import STATUS, format_fcfa, TEXT
 
 
 class StudentDetail(QDialog):
@@ -173,6 +174,12 @@ class StudentDetail(QDialog):
         self.paiements_table.setAlternatingRowColors(True)
         self.paiements_table.setSortingEnabled(True)
         
+        # Masquer les numéros de ligne
+        self.paiements_table.verticalHeader().setVisible(False)
+        
+        # Définir la hauteur des lignes
+        self.paiements_table.verticalHeader().setDefaultSectionSize(36)
+        
         # Ajustement des colonnes
         header = self.paiements_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # N° Reçu
@@ -191,25 +198,21 @@ class StudentDetail(QDialog):
         
         # ===== Boutons =====
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
         
-        self.btn_view_receipt = QPushButton("Reçu PDF")
-        self.btn_view_receipt.setMinimumHeight(35)
+        self.btn_view_receipt = QPushButton("Consulter le reçu")
+        self.btn_view_receipt.setProperty("variant", "secondary")
         self.btn_view_receipt.setEnabled(False)  # Désactivé par défaut
-        self.btn_view_receipt.setStyleSheet("background-color: #FF9800; color: white;")
-        # Connexion signal -> slot : clic -> génération/impression du reçu
         self.btn_view_receipt.clicked.connect(self._on_view_receipt_clicked)
         buttons_layout.addWidget(self.btn_view_receipt)
         
         self.btn_new_payment = QPushButton("Nouveau paiement")
-        self.btn_new_payment.setMinimumHeight(35)
-        self.btn_new_payment.setStyleSheet("background-color: #2196F3; color: white;")
-        # Connexion signal -> slot : clic -> ouverture du dialogue de paiement
+        self.btn_new_payment.setProperty("variant", "primary")
         self.btn_new_payment.clicked.connect(self._on_new_payment_clicked)
         buttons_layout.addWidget(self.btn_new_payment)
         
         self.btn_close = QPushButton("Fermer")
-        self.btn_close.setMinimumHeight(35)
-        # Connexion signal -> slot : clic -> fermeture de la fiche
+        self.btn_close.setProperty("variant", "secondary")
         self.btn_close.clicked.connect(self.accept)
         buttons_layout.addWidget(self.btn_close)
         
@@ -239,20 +242,15 @@ class StudentDetail(QDialog):
             total_paye = student['total_du'] - student['solde']
             
             # Affichage des informations financières
-            self.total_label.setText(f"Total dû : {student['total_du']:,} FCFA")
-            self.paye_label.setText(f"Payé : {total_paye:,} FCFA")
-            self.solde_label.setText(f"Solde : {student['solde']:,} FCFA")
+            self.total_label.setText(f"Total dû : {format_fcfa(student['total_du'])}")
+            self.paye_label.setText(f"Payé : {format_fcfa(total_paye)}")
+            self.solde_label.setText(f"Solde : {format_fcfa(student['solde'])}")
             
-            # Affichage du statut avec couleur
-            self.statut_label.setText(f"Statut : {student['statut']}")
-            # Attribution de la couleur selon le statut
-            # Pourquoi ces couleurs : Vert pour soldé (positif), orange pour partiel (attention), rouge pour non payé (alerte)
-            if student['statut'] == "Soldé":
-                self.statut_label.setStyleSheet("color: green; background-color: #e8f5e9; padding: 10px; border-radius: 5px;")
-            elif student['statut'] == "Partiellement payé":
-                self.statut_label.setStyleSheet("color: orange; background-color: #fff3e0; padding: 10px; border-radius: 5px;")
-            elif student['statut'] == "Non payé":
-                self.statut_label.setStyleSheet("color: red; background-color: #ffebee; padding: 10px; border-radius: 5px;")
+            # Affichage du statut avec couleur (fond ET texte pour contraste WCAG)
+            statut = student['statut']
+            statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
+            self.statut_label.setText(f"Statut : {statut}")
+            self.statut_label.setStyleSheet(f"color: {statut_colors['fg']}; background-color: {statut_colors['bg']}; padding: 10px; border-radius: 5px; font-weight: bold;")
             
             # Chargement des paiements
             self._load_paiements()
@@ -300,12 +298,12 @@ class StudentDetail(QDialog):
                 self.paiements_table.setItem(row, 2, mode_item)
                 
                 # Montant
-                montant_item = QTableWidgetItem(f"{paiement['montant']:,}")
+                montant_item = QTableWidgetItem(format_fcfa(paiement['montant']))
                 montant_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.paiements_table.setItem(row, 3, montant_item)
                 
                 # Solde après
-                solde_item = QTableWidgetItem(f"{paiement['solde_apres']:,}")
+                solde_item = QTableWidgetItem(format_fcfa(paiement['solde_apres']))
                 solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.paiements_table.setItem(row, 4, solde_item)
             
@@ -373,25 +371,23 @@ class StudentDetail(QDialog):
         layout = QVBoxLayout()
         
         label = QLabel("Que souhaitez-vous faire avec ce reçu ?")
-        label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(label)
         
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
         
         btn_save_pdf = QPushButton("Enregistrer le PDF")
-        btn_save_pdf.setMinimumHeight(35)
-        btn_save_pdf.setStyleSheet("background-color: #2196F3; color: white;")
+        btn_save_pdf.setProperty("variant", "primary")
         btn_save_pdf.clicked.connect(lambda: self._enregistrer_pdf(dialog, paiement_id))
         buttons_layout.addWidget(btn_save_pdf)
         
         btn_print = QPushButton("Imprimer")
-        btn_print.setMinimumHeight(35)
-        btn_print.setStyleSheet("background-color: #FF9800; color: white;")
+        btn_print.setProperty("variant", "secondary")
         btn_print.clicked.connect(lambda: self._imprimer_recu(dialog, paiement_id))
         buttons_layout.addWidget(btn_print)
         
         btn_cancel = QPushButton("Annuler")
-        btn_cancel.setMinimumHeight(35)
+        btn_cancel.setProperty("variant", "secondary")
         btn_cancel.clicked.connect(dialog.reject)
         buttons_layout.addWidget(btn_cancel)
         

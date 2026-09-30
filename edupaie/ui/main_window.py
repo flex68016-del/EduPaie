@@ -95,9 +95,6 @@ class MainWindow(QMainWindow):
         
         # Création des pages
         self._create_pages()
-        
-        # Application du style
-        self._apply_style()
     
     def _create_sidebar(self) -> QFrame:
         """
@@ -137,8 +134,7 @@ class MainWindow(QMainWindow):
         self.btn_dashboard.setCheckable(True)
         self.btn_dashboard.setChecked(True)
         self.btn_dashboard.setObjectName("nav_button")
-        # Connexion signal -> slot : clic sur le bouton -> affichage page tableau de bord
-        # Pourquoi clicked.connect : Mécanisme signal/slot de Qt pour réagir aux événements
+        self.btn_dashboard.setProperty("active", True)  # Page active par défaut
         self.btn_dashboard.clicked.connect(lambda: self._show_page(0))
         sidebar_layout.addWidget(self.btn_dashboard)
         
@@ -146,7 +142,6 @@ class MainWindow(QMainWindow):
         self.btn_students = QPushButton("Élèves")
         self.btn_students.setCheckable(True)
         self.btn_students.setObjectName("nav_button")
-        # Connexion signal -> slot : clic sur le bouton -> affichage page élèves
         self.btn_students.clicked.connect(lambda: self._show_page(1))
         sidebar_layout.addWidget(self.btn_students)
         
@@ -194,6 +189,9 @@ class MainWindow(QMainWindow):
         buttons = [self.btn_dashboard, self.btn_students]
         for i, button in enumerate(buttons):
             button.setChecked(i == index)
+            button.setProperty("active", i == index)
+            button.style().unpolish()  # Force le rechargement du style
+            button.style().polish(button.style())
     
     def _refresh_dashboard(self) -> None:
         """
@@ -206,53 +204,3 @@ class MainWindow(QMainWindow):
         dashboard_widget = self.stack.widget(0)
         if hasattr(dashboard_widget, 'refresh'):
             dashboard_widget.refresh()
-    
-    def _apply_style(self) -> None:
-        """
-        Applique le style QSS (Qt Style Sheet) à l'application.
-        
-        Pourquoi QSS : Permet de styler l'interface comme CSS pour le web,
-        séparant le style de la logique.
-        
-        Style choisi : Sobre et professionnel, avec :
-        - Couleurs neutres (gris, blanc)
-        - Contraste suffisant pour la lisibilité
-        - Effet hover sur les boutons pour l'interactivité
-        """
-        style = """
-            QMainWindow {
-                background-color: #f5f5f5;
-            }
-            
-            #sidebar {
-                background-color: #2c3e50;
-                color: white;
-            }
-            
-            QLabel {
-                color: #333333;
-            }
-            
-            #sidebar QLabel {
-                color: white;
-            }
-            
-            #nav_button {
-                background-color: #34495e;
-                color: white;
-                border: none;
-                padding: 10px;
-                border-radius: 5px;
-                text-align: left;
-            }
-            
-            #nav_button:hover {
-                background-color: #3d566e;
-            }
-            
-            #nav_button:checked {
-                background-color: #3498db;
-            }
-        """
-        
-        self.setStyleSheet(style)

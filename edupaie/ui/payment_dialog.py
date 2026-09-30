@@ -27,11 +27,12 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 from PySide6.QtCore import Qt, QDate, Signal
-from PySide6.QtGui import QIntValidator, QColor, QPalette
+from PySide6.QtGui import QIntValidator, QColor
 from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
 from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.error_handler import handle_slot_errors
+from edupaie.ui.theme import format_fcfa
 
 
 class PaymentDialog(QDialog):
@@ -126,7 +127,6 @@ class PaymentDialog(QDialog):
         solde_font.setPointSize(14)
         solde_font.setBold(True)
         self.solde_value_label.setFont(solde_font)
-        self.solde_value_label.setStyleSheet("color: blue;")
         solde_layout.addWidget(solde_label)
         solde_layout.addWidget(self.solde_value_label)
         solde_layout.addStretch()
@@ -146,14 +146,6 @@ class PaymentDialog(QDialog):
         montant_label.setMinimumWidth(120)
         self.montant_input = QLineEdit()
         self.montant_input.setPlaceholderText("Ex: 10000")
-        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
-        self.montant_input.setStyleSheet("color: white; background-color: #3d566e;")
-        montant_palette = self.montant_input.palette()
-        montant_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        montant_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
-        self.montant_input.setPalette(montant_palette)
-        # QIntValidator : n'accepte que des entiers
-        # Pourquoi QIntValidator : Empêche l'utilisateur de saisir des lettres ou des décimales
         self.montant_input.setValidator(QIntValidator(1, 999999999))
         montant_layout.addWidget(montant_label)
         montant_layout.addWidget(self.montant_input)
@@ -166,7 +158,6 @@ class PaymentDialog(QDialog):
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
         self.date_input.setDate(QDate.currentDate())
-        # Format d'affichage de la date
         self.date_input.setDisplayFormat("dd/MM/yyyy")
         date_layout.addWidget(date_label)
         date_layout.addWidget(self.date_input)
@@ -188,7 +179,7 @@ class PaymentDialog(QDialog):
         
         # Avertissement (visible si montant > solde)
         self.warning_label = QLabel()
-        self.warning_label.setStyleSheet("color: red;")
+        self.warning_label.setProperty("status", "error")
         self.warning_label.setWordWrap(True)
         self.warning_label.hide()
         form_layout.addWidget(self.warning_label)
@@ -200,50 +191,15 @@ class PaymentDialog(QDialog):
         
         # ===== Boutons =====
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
         
         self.btn_cancel = QPushButton("Annuler")
-        self.btn_cancel.setMinimumHeight(35)
-        # Bouton gris pour annuler
-        self.btn_cancel.setStyleSheet("""
-            QPushButton {
-                background-color: #9E9E9E;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #757575;
-            }
-            QPushButton:pressed {
-                background-color: #616161;
-            }
-        """)
-        # Connexion signal -> slot : clic -> fermeture sans validation
+        self.btn_cancel.setProperty("variant", "secondary")
         self.btn_cancel.clicked.connect(self.reject)
         buttons_layout.addWidget(self.btn_cancel)
         
         self.btn_validate = QPushButton("Valider")
-        self.btn_validate.setMinimumHeight(35)
-        # Bouton vert pour valider
-        self.btn_validate.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-        """)
-        # Connexion signal -> slot : clic -> validation et enregistrement
+        self.btn_validate.setProperty("variant", "primary")
         self.btn_validate.clicked.connect(self._on_validate_clicked)
         buttons_layout.addWidget(self.btn_validate)
         
@@ -274,15 +230,7 @@ class PaymentDialog(QDialog):
             
             # Affichage du solde restant
             solde = student['solde']
-            self.solde_value_label.setText(f"{solde:,} FCFA")
-            
-            # Couleur du solde selon le statut
-            if solde == 0:
-                self.solde_value_label.setStyleSheet("color: green; font-weight: bold;")
-            elif solde > 0:
-                self.solde_value_label.setStyleSheet("color: orange; font-weight: bold;")
-            else:
-                self.solde_value_label.setStyleSheet("color: red; font-weight: bold;")
+            self.solde_value_label.setText(format_fcfa(solde))
             
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des données : {str(e)}")
@@ -313,7 +261,7 @@ class PaymentDialog(QDialog):
             
             if montant > solde:
                 self.warning_label.setText(
-                    f"Attention : Le montant ({montant:,} FCFA) dépasse le solde restant ({solde:,} FCFA)."
+                    f"Attention : Le montant ({format_fcfa(montant)}) dépasse le solde restant ({format_fcfa(solde)})."
                 )
                 self.warning_label.show()
             else:
@@ -422,25 +370,23 @@ class PaymentDialog(QDialog):
         layout = QVBoxLayout()
         
         label = QLabel("Voulez-vous générer le reçu de paiement ?")
-        label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(label)
         
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
         
         btn_save_pdf = QPushButton("Enregistrer le PDF")
-        btn_save_pdf.setMinimumHeight(35)
-        btn_save_pdf.setStyleSheet("background-color: #2196F3; color: white;")
+        btn_save_pdf.setProperty("variant", "primary")
         btn_save_pdf.clicked.connect(lambda: self._enregistrer_pdf(dialog))
         buttons_layout.addWidget(btn_save_pdf)
         
         btn_print = QPushButton("Imprimer")
-        btn_print.setMinimumHeight(35)
-        btn_print.setStyleSheet("background-color: #FF9800; color: white;")
+        btn_print.setProperty("variant", "secondary")
         btn_print.clicked.connect(lambda: self._imprimer_recu(dialog))
         buttons_layout.addWidget(btn_print)
         
         btn_skip = QPushButton("Passer")
-        btn_skip.setMinimumHeight(35)
+        btn_skip.setProperty("variant", "secondary")
         btn_skip.clicked.connect(dialog.accept)
         buttons_layout.addWidget(btn_skip)
         
