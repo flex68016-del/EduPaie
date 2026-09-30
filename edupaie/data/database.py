@@ -62,8 +62,8 @@ class Database:
         # Chargement du schéma SQL depuis le fichier
         # Pourquoi : Sépare la définition du schéma du code Python
         # Pourquoi resource_path : Fonctionne aussi avec PyInstaller (sys._MEIPASS)
-        # Pourquoi db/schema.sql : Chemin relatif depuis le dossier edupaie/
-        self._schema_path = resource_path("db/schema.sql")
+        # Pourquoi edupaie/db/schema.sql : Chemin relatif depuis le dossier edupaie/
+        self._schema_path = resource_path("edupaie/db/schema.sql")
     
     def connect(self) -> sqlite3.Connection:
         """
@@ -127,6 +127,27 @@ class Database:
         # Exécution du script SQL
         # Pourquoi executescript : Permet d'exécuter plusieurs instructions SQL
         # (CREATE TABLE, PRAGMA, CREATE INDEX) en un seul appel
+        self._connection.executescript(schema_sql)
+        
+        # Commit des changements
+        # Pourquoi : Le schéma doit être persisté immédiatement
+        self._connection.commit()
+    
+    def initialize_schema_from_string(self, schema_sql: str) -> None:
+        """
+        Initialise le schéma de la base de données à partir d'une chaîne SQL.
+        
+        Cette méthode est utilisée lorsque le schema.sql n'est pas disponible
+        en tant que fichier (par exemple, dans l'exécutable PyInstaller).
+        
+        Args:
+            schema_sql: Le script SQL complet pour initialiser la base.
+        
+        Raises:
+            sqlite3.Error: Si l'exécution du schéma échoue.
+        """
+        # Exécution du script SQL
+        # Pourquoi executescript : Permet d'exécuter plusieurs instructions SQL
         self._connection.executescript(schema_sql)
         
         # Commit des changements

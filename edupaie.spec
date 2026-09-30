@@ -1,7 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('edupaie/db/schema.sql', 'edupaie/db'), ('edupaie/edupaie.db', 'edupaie'), ('edupaie/db/create_model_db.py', 'edupaie/db'), ('README.md', '.')]
+datas = [
+    ('edupaie/db/schema.sql', 'edupaie/db'),
+    ('edupaie/edupaie.db', 'edupaie'),
+    ('edupaie/db/create_model_db.py', 'edupaie/db'),
+    ('README.md', '.')
+]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('edupaie')

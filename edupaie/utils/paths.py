@@ -132,7 +132,7 @@ def initialize_database():
     Au premier lancement, cette fonction :
     1. Copie la base de données modèle (edupaie.db avec données de test) depuis
        les ressources vers le dossier utilisateur
-    2. Si la base modèle n'existe pas, crée une base vide via Database.initialize_schema()
+    2. Si la base modèle n'existe pas, crée une base vide via schema.sql
     
     Pourquoi cette fonction : Permet à l'application de démarrer avec des données
     de test pour la démonstration, tout en garantissant que les données sont stockées
@@ -146,8 +146,8 @@ def initialize_database():
     Pourquoi user_data_dir : Ce dossier est persistant et respecte les conventions OS,
     garantissant que les données survivent aux mises à jour de l'application.
     """
+    # Import local pour éviter les imports circulaires
     from edupaie.data.database import Database
-    from edupaie.utils.paths import resource_path, user_data_dir
     
     # Chemin de la base de données persistante
     db_path = user_data_dir() / "edupaie.db"
@@ -156,14 +156,27 @@ def initialize_database():
     # Pourquoi edupaie.db : La base modèle est dans le dossier edupaie/ du projet
     db_model_path = resource_path("edupaie.db")
     
-    # Si la base persistante n'existe pas, copier la base modèle
+    # Chemin du schema SQL (embarqué dans les ressources)
+    # Pourquoi edupaie/db/schema.sql : Le schema est dans edupaie/db/ du projet
+    schema_path = resource_path("edupaie/db/schema.sql")
+    
+    # Si la base persistante n'existe pas, l'initialiser
     if not db_path.exists():
         if db_model_path.exists():
             # Copie de la base modèle vers le dossier utilisateur
             shutil.copy2(db_model_path, db_path)
         else:
-            # Si la base modèle n'existe pas, créer une base vide
-            Database(str(db_path)).connect()
+            # Si la base modèle n'existe pas, créer une base vide via schema.sql
+            # Pourquoi lire le schema.sql : Le schema est nécessaire pour créer les tables
+            if schema_path.exists():
+                with open(schema_path, 'r', encoding='utf-8') as f:
+                    schema_sql = f.read()
+                
+                # Création de la base avec le schema
+                Database(str(db_path)).initialize_schema_from_string(schema_sql)
+            else:
+                # Fallback : créer une base vide avec connect() qui utilisera le schema interne
+                Database(str(db_path)).connect()
     
     # Configuration du logging pour écrire dans le dossier utilisateur
     # Pourquoi logging : Permet de tracer les erreurs et le comportement de l'application
