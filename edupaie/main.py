@@ -22,6 +22,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
 from edupaie.ui.main_window import MainWindow
 
 def main() -> None:
@@ -46,6 +47,13 @@ def main() -> None:
     app.setStyle("Fusion")
     app.setPalette(build_palette())
     app.setStyleSheet(build_stylesheet())
+    
+    # Configuration de l'icône de l'application
+    # Pourquoi : Affiche l'icône dans la barre de titre de la fenêtre
+    # Pourquoi resource_path : Fonctionne en développement et avec PyInstaller
+    from edupaie.utils.paths import resource_path
+    icon_path = resource_path("edupaie/assets/edupaie-icon.svg")
+    app.setWindowIcon(QIcon(str(icon_path)))
     
     # Configuration de l'exception hook global pour afficher les erreurs dans QMessageBox
     # Cela remplace le comportement par défaut qui affiche l'erreur dans la console

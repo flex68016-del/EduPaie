@@ -5,6 +5,7 @@ datas = [
     ('edupaie/db/schema.sql', 'edupaie/db'),
     ('edupaie/edupaie.db', 'edupaie'),
     ('edupaie/db/create_model_db.py', 'edupaie/db'),
+    ('edupaie/assets', 'edupaie/assets'),
     ('README.md', '.')
 ]
 binaries = []
@@ -49,4 +50,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='edupaie/assets/edupaie-icon.svg'
 )

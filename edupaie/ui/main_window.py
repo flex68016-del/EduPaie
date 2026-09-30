@@ -26,13 +26,14 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QStackedWidget, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPixmap
 from edupaie.data.database import Database
 from edupaie.services.student_service import StudentService
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.ui.students_view import StudentsView
 from edupaie.ui.dashboard import Dashboard
 from edupaie.ui.theme import refresh_style
+from edupaie.utils.paths import resource_path
 
 
 class MainWindow(QMainWindow):
@@ -115,7 +116,9 @@ class MainWindow(QMainWindow):
         sidebar_layout.setContentsMargins(10, 20, 10, 20)
         sidebar_layout.setSpacing(10)
         
-        # Titre de l'application
+        # Titre de l'application (fallback si le logo SVG ne charge pas)
+        # Note : Le logo SVG est inclus mais QPixmap peut ne pas charger les SVG
+        # sans le plugin Qt SVG. Pour l'instant, on utilise le texte.
         title_label = QLabel("EduPaie")
         title_label.setObjectName("sidebarTitle")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
