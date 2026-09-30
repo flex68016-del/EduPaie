@@ -181,14 +181,17 @@ def initialize_database():
     # Configuration du logging pour écrire dans le dossier utilisateur
     # Pourquoi logging : Permet de tracer les erreurs et le comportement de l'application
     # Pourquoi dossier utilisateur : Les logs sont persistants et accessibles pour le support
+    # Note : La configuration est déjà faite dans error_handler.py, donc on configure seulement
+    # le niveau INFO ici si ce n'est pas déjà configuré
     log_file = user_data_dir() / "edupaie.log"
     
-    logging.basicConfig(
-        filename=str(log_file),
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            filename=str(log_file),
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
     
     logging.info("Application EduPaie démarrée")
     logging.info(f"Base de données : {db_path}")

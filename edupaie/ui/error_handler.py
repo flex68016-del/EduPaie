@@ -28,15 +28,21 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
+from edupaie.utils.paths import user_data_dir
 
 
 # Configuration du logging pour les erreurs
 # Pourquoi logging : Permet de tracer les erreurs dans un fichier pour le débogage
+# Pourquoi user_data_dir() : Écrit dans %APPDATA%/EduPaie (accès garanti), pas dans C:\
+log_file = user_data_dir() / "edupaie_errors.log"
 logging.basicConfig(
-    filename='edupaie_errors.log',
+    filename=str(log_file),
     level=logging.ERROR,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+# Chemin du fichier de log pour les messages d'erreur
+ERROR_LOG_PATH = str(log_file)
 
 
 def setup_exception_handler() -> None:
@@ -86,7 +92,7 @@ def setup_exception_handler() -> None:
             show_error_dialog(
                 "Erreur critique",
                 f"Une erreur inattendue s'est produite :\n\n{error_message}\n\n"
-                f"Détails techniques enregistrés dans edupaie_errors.log",
+                f"Détails techniques enregistrés dans {ERROR_LOG_PATH}",
                 QMessageBox.Critical
             )
     
@@ -186,7 +192,7 @@ def handle_slot_errors(func: Callable) -> Callable:
             show_error_dialog(
                 "Erreur critique",
                 f"Une erreur inattendue s'est produite :\n\n{str(e)}\n\n"
-                f"Détails techniques enregistrés dans edupaie_errors.log",
+                f"Détails techniques enregistrés dans {ERROR_LOG_PATH}",
                 QMessageBox.Critical
             )
     
