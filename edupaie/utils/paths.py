@@ -164,8 +164,15 @@ def initialize_database():
     db_path = user_data_dir() / "edupaie.db"
     
     # Chemin de la base de données modèle (embarquée dans les ressources)
-    # Pourquoi edupaie.db : La base modèle est dans le dossier edupaie/ du projet
-    db_model_path = resource_path("edupaie.db")
+    # En développement : edupaie/edupaie.db (dans le dossier du package)
+    # Avec PyInstaller : edupaie/edupaie.db (inclus dans le .spec)
+    if hasattr(sys, '_MEIPASS'):
+        # Cas PyInstaller : le chemin est sys._MEIPASS/edupaie/edupaie.db
+        db_model_path = resource_path("edupaie/edupaie.db")
+    else:
+        # Cas développement : le chemin est edupaie/edupaie.db par rapport au package
+        # __file__ est edupaie/utils/paths.py, donc parent.parent est edupaie/
+        db_model_path = Path(__file__).parent.parent / "edupaie.db"
     
     # Chemin du schema SQL (embarqué dans les ressources)
     # Pourquoi edupaie/db/schema.sql : Le schema est dans edupaie/db/ du projet
