@@ -28,14 +28,14 @@ from PySide6.QtWidgets import (
     QHeaderView, QMessageBox, QDialog
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QFont
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 from edupaie.ui.student_form import StudentForm
 from edupaie.ui.student_detail import StudentDetail
 from edupaie.ui.error_handler import handle_slot_errors
-from edupaie.ui.theme import STATUS_COLORS
+from edupaie.ui.theme import STATUS, format_fcfa, TEXT
 
 
 class StudentsView(QWidget):
@@ -97,50 +97,32 @@ class StudentsView(QWidget):
         
         # ===== Section : Recherche et filtre =====
         filter_layout = QHBoxLayout()
+        filter_layout.setContentsMargins(20, 10, 20, 10)
+        filter_layout.setSpacing(12)
         
         # Champ de recherche
         search_label = QLabel("Rechercher :")
-        search_label.setStyleSheet("color: white;")
+        search_label.setProperty("isFilter", True)
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nom ou prénom...")
-        # Couleur du placeholder en noir, texte saisi en blanc, fond sombre pour lisibilité
-        self.search_input.setStyleSheet("color: white; background-color: #3d566e;")
-        palette = self.search_input.palette()
-        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(0, 0, 0))
-        palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
-        self.search_input.setPalette(palette)
-        # Connexion signal -> slot : texte changé -> filtrage en temps réel
-        # Pourquoi textChanged.connect : Réagit à chaque frappe pour un filtrage instantané
         self.search_input.textChanged.connect(self._on_search_changed)
         filter_layout.addWidget(search_label)
         filter_layout.addWidget(self.search_input)
         
         # Filtre par classe
         classe_label = QLabel("Classe :")
-        classe_label.setStyleSheet("color: white;")
+        classe_label.setProperty("isFilter", True)
         self.classe_filter = QComboBox()
         self._load_classes_filter()
-        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
-        self.classe_filter.setStyleSheet("""
-            QComboBox { color: white; }
-            QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
-        """)
-        # Connexion signal -> slot : sélection changée -> filtrage
         self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(classe_label)
         filter_layout.addWidget(self.classe_filter)
         
         # Filtre par statut
         statut_label = QLabel("Statut :")
-        statut_label.setStyleSheet("color: white;")
+        statut_label.setProperty("isFilter", True)
         self.statut_filter = QComboBox()
         self._load_statut_filter()
-        # Couleur du texte : blanc quand fermé et ouvert pour lisibilité sur fond sombre
-        self.statut_filter.setStyleSheet("""
-            QComboBox { color: white; }
-            QComboBox QAbstractItemView { color: white; background-color: #2c3e50; }
-        """)
-        # Connexion signal -> slot : sélection changée -> filtrage
         self.statut_filter.currentIndexChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(statut_label)
         filter_layout.addWidget(self.statut_filter)
@@ -162,6 +144,12 @@ class StudentsView(QWidget):
         # Pourquoi setSortingEnabled : Permet le tri par colonne en cliquant sur l'en-tête
         self.table.setSortingEnabled(True)
         
+        # Masquer les numéros de ligne
+        self.table.verticalHeader().setVisible(False)
+        
+        # Définir la hauteur des lignes
+        self.table.verticalHeader().setDefaultSectionSize(36)
+        
         # Ajustement des colonnes
         header = self.table.horizontalHeader()
         # Pourquoi setSectionResizeMode : Ajuste automatiquement la largeur des colonnes
@@ -177,85 +165,23 @@ class StudentsView(QWidget):
         
         # ===== Section : Boutons d'action =====
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
         
         self.btn_add = QPushButton("Ajouter")
-        self.btn_add.setMinimumHeight(35)
-        # Bouton vert pour ajouter
-        self.btn_add.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-        """)
-        # Connexion signal -> slot : clic -> ouverture formulaire d'ajout
+        self.btn_add.setProperty("variant", "primary")
         self.btn_add.clicked.connect(self._on_add_clicked)
+        buttons_layout.addWidget(self.btn_add)
         
         self.btn_edit = QPushButton("Modifier")
-        self.btn_edit.setMinimumHeight(35)
+        self.btn_edit.setProperty("variant", "secondary")
         self.btn_edit.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Bouton bleu pour modifier
-        self.btn_edit.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #0b7dda;
-            }
-            QPushButton:pressed {
-                background-color: #0a5f8f;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        # Connexion signal -> slot : clic -> ouverture formulaire de modification
         self.btn_edit.clicked.connect(self._on_edit_clicked)
+        buttons_layout.addWidget(self.btn_edit)
         
         self.btn_delete = QPushButton("Supprimer")
-        self.btn_delete.setMinimumHeight(35)
+        self.btn_delete.setProperty("variant", "danger")
         self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Bouton bleu pour supprimer
-        self.btn_delete.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #0b7dda;
-            }
-            QPushButton:pressed {
-                background-color: #0a5f8f;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        # Connexion signal -> slot : clic -> suppression de l'élève sélectionné
         self.btn_delete.clicked.connect(self._on_delete_clicked)
-        
-        buttons_layout.addWidget(self.btn_add)
-        buttons_layout.addWidget(self.btn_edit)
         buttons_layout.addWidget(self.btn_delete)
         layout.addLayout(buttons_layout)
         
@@ -370,27 +296,32 @@ class StudentsView(QWidget):
             self.table.setItem(row, 2, classe_item)
             
             # Total dû
-            total_item = QTableWidgetItem(f"{student['total_du']:,}")  # Format avec séparateur de milliers
+            total_item = QTableWidgetItem(format_fcfa(student['total_du']))
             total_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(row, 3, total_item)
             
             # Payé
             # Pourquoi student.get('total_paye', 0) : Le service fournit maintenant total_paye
             total_paye = student.get('total_paye', 0)
-            paye_item = QTableWidgetItem(f"{total_paye:,}")  # Format avec séparateur de milliers
+            paye_item = QTableWidgetItem(format_fcfa(total_paye))
             paye_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(row, 4, paye_item)
             
             # Solde
-            solde_item = QTableWidgetItem(f"{student['solde']:,}")  # Format avec séparateur de milliers
+            solde_item = QTableWidgetItem(format_fcfa(student['solde']))
             solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(row, 5, solde_item)
             
-            # Statut avec couleur
-            statut_item = QTableWidgetItem(student['statut'])
-            # Attribution de la couleur selon le statut
-            # Pourquoi STATUS_COLORS : Couleurs cohérentes définies dans theme.py
-            statut_item.setBackground(STATUS_COLORS.get(student['statut'], QColor(255, 255, 255)))
+            # Statut avec couleur (fond ET texte pour contraste WCAG)
+            statut = student['statut']
+            statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
+            statut_item = QTableWidgetItem(statut)
+            statut_item.setBackground(QColor(statut_colors["bg"]))
+            statut_item.setForeground(QColor(statut_colors["fg"]))
+            statut_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+            font = statut_item.font()
+            font.setBold(True)
+            statut_item.setFont(font)
             self.table.setItem(row, 6, statut_item)
         
         # Réactivation du tri

@@ -39,6 +39,14 @@ def main() -> None:
     # Création de l'application Qt
     app = QApplication(sys.argv)
     
+    # Application du thème visuel centralisé (mode clair forcé)
+    # Pourquoi : Force un mode clair cohérent quel que soit le thème système de Windows
+    # Pourquoi avant MainWindow : La palette doit être appliquée avant la création des widgets
+    from edupaie.ui.theme import build_palette, build_stylesheet
+    app.setStyle("Fusion")
+    app.setPalette(build_palette())
+    app.setStyleSheet(build_stylesheet())
+    
     # Configuration de l'exception hook global pour afficher les erreurs dans QMessageBox
     # Cela remplace le comportement par défaut qui affiche l'erreur dans la console
     from edupaie.ui.error_handler import setup_exception_handler
