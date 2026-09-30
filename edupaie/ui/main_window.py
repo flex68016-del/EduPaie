@@ -32,6 +32,7 @@ from edupaie.services.student_service import StudentService
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.ui.students_view import StudentsView
 from edupaie.ui.dashboard import Dashboard
+from edupaie.ui.theme import refresh_style
 
 
 class MainWindow(QMainWindow):
@@ -142,6 +143,7 @@ class MainWindow(QMainWindow):
         self.btn_students = QPushButton("Élèves")
         self.btn_students.setCheckable(True)
         self.btn_students.setObjectName("nav_button")
+        self.btn_students.setProperty("active", False)  # Page inactive par défaut
         self.btn_students.clicked.connect(lambda: self._show_page(1))
         sidebar_layout.addWidget(self.btn_students)
         
@@ -190,8 +192,7 @@ class MainWindow(QMainWindow):
         for i, button in enumerate(buttons):
             button.setChecked(i == index)
             button.setProperty("active", i == index)
-            button.style().unpolish()  # Force le rechargement du style
-            button.style().polish(button.style())
+            refresh_style(button)
     
     def _refresh_dashboard(self) -> None:
         """

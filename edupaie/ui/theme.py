@@ -182,6 +182,23 @@ def build_palette() -> QPalette:
 # disparates. Le style Fusion est utilisé pour neutraliser le thème système.
 # =============================================================================
 
+def refresh_style(widget: QWidget) -> None:
+    """
+    Force Qt à réappliquer le QSS après un changement de propriété dynamique.
+    
+    Sans cela, le nouveau style n'est pas pris en compte par Qt.
+    
+    Args:
+        widget: Le widget dont le style doit être rafraîchi.
+    
+    Pourquoi cette fonction : Quand on change une propriété dynamique
+    (property) sur un widget, Qt ne rafraîchit pas automatiquement le style.
+    Il faut appeler unpolish() puis polish() pour forcer le recalcul.
+    """
+    widget.style().unpolish(widget)
+    widget.style().polish(widget)
+
+
 def build_stylesheet() -> str:
     """
     Construit et retourne le QSS (Qt Style Sheet) centralisé.
