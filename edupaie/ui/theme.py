@@ -40,6 +40,8 @@ TEXT_DISABLED = "#6B7280"    # Texte désactivé (gris clair)
 # Couleurs de la barre latérale
 SIDEBAR = "#16233B"          # Fond de la barre latérale (bleu très foncé)
 SIDEBAR_HOVER = "#23365A"    # Survol de la barre latérale (bleu foncé)
+SIDEBAR_TEXT = "#FFFFFF"     # Texte de la barre latérale (blanc pour contraste sur fond foncé)
+SIDEBAR_SEPARATOR = "#2F4468"  # Séparateur de la barre latérale (bleu moyen)
 
 # Couleurs primaires
 PRIMARY = "#2563EB"          # Couleur principale (bleu)
@@ -227,6 +229,27 @@ def build_stylesheet() -> str:
     QLabel {{
         color: {TEXT};
         background: transparent;
+    }}
+    
+    /* ===== Barre latérale ===== */
+    /* Pourquoi un sélecteur plus précis (#sidebar QLabel#sidebarTitle) :
+       La règle QLabel globale écraserait la couleur blanche du titre de la barre latérale.
+       En utilisant l'objectName du conteneur (#sidebar) ET du titre (#sidebarTitle),
+       on augmente la spécificité CSS pour que cette règle l'emporte sur la règle globale.
+       Fond foncé = texte blanc (règle d'or pour le contraste WCAG). */
+    QWidget#sidebar QLabel#sidebarTitle {{
+        color: {SIDEBAR_TEXT};
+        background: transparent;
+        font-size: 20pt;
+        font-weight: bold;
+        padding: 16px;
+    }}
+    
+    QWidget#sidebar QFrame[frameShape="4"] {{
+        /* Séparateur fin sous le titre */
+        background: {SIDEBAR_SEPARATOR};
+        max-height: 1px;
+        margin: 0 16px;
     }}
     
     /* ===== Filtres et libellés ===== */
@@ -499,13 +522,6 @@ def build_stylesheet() -> str:
     
     QWidget#sidebar QPushButton[active="true"] {{
         background: {PRIMARY};
-    }}
-    
-    QWidget#sidebar QLabel#sidebar_title {{
-        color: white;
-        font-size: 16pt;
-        font-weight: bold;
-        padding: 15px;
     }}
     
     /* ===== Labels de statut ===== */
