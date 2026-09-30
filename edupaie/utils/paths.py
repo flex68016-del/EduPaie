@@ -88,6 +88,9 @@ def user_data_dir() -> Path:
     Returns:
         Le chemin vers le répertoire des données utilisateur.
     
+    Raises:
+        OSError: Si le répertoire ne peut pas être créé (droits insuffisants, etc.)
+    
     Example:
         # Windows : C:/Users/Jean/AppData/Roaming/EduPaie
         # Linux : /home/jean/.config/edupaie
@@ -120,7 +123,15 @@ def user_data_dir() -> Path:
     # Création du répertoire s'il n'existe pas
     # Pourquoi mkdir(parents=True) : Crée tous les répertoires parents si nécessaire
     # Pourquoi exist_ok=True : Ne déclenche pas d'erreur si le répertoire existe déjà
-    data_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        # Si la création échoue (droits insuffisants, etc.), lever une erreur claire
+        raise OSError(
+            f"Impossible de créer le répertoire des données utilisateur : {data_dir}\n"
+            f"Erreur : {e}\n"
+            f"Vérifiez que vous avez les droits d'écriture dans ce répertoire."
+        ) from e
     
     return data_dir
 

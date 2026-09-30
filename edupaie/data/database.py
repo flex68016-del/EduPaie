@@ -75,6 +75,7 @@ class Database:
         Raises:
             sqlite3.Error: Si la connexion échoue ou si le schéma est invalide.
             FileNotFoundError: Si le fichier schema.sql n'existe pas.
+            RuntimeError: Si la connexion ne peut pas être établie (droits, chemin invalide, etc.)
         """
         # Si la connexion existe déjà, la retourner
         # Pourquoi : Évite de créer plusieurs connexions inutilement
@@ -83,7 +84,14 @@ class Database:
         
         # Création de la connexion SQLite
         # Pourquoi sqlite3.connect : Crée la base si elle n'existe pas
-        self._connection = sqlite3.connect(self.db_path)
+        try:
+            self._connection = sqlite3.connect(self.db_path)
+        except sqlite3.Error as e:
+            raise RuntimeError(
+                f"Impossible de se connecter à la base de données : {self.db_path}\n"
+                f"Erreur SQLite : {e}\n"
+                f"Vérifiez que vous avez les droits d'écriture dans ce répertoire."
+            ) from e
         
         # Configuration du row_factory pour retourner des objets Row
         # Pourquoi Row : Permet d'accéder aux colonnes par nom (row['nom']) au lieu
@@ -94,13 +102,23 @@ class Database:
         # Pourquoi à chaque connexion : SQLite ne conserve pas cette option entre
         # les connexions, donc il faut la réactiver à chaque fois pour garantir
         # l'intégrité référentielle (ON DELETE RESTRICT, etc.)
-        self._connection.execute("PRAGMA foreign_keys = ON")
+        try:
+            self._connection.execute("PRAGMA foreign_keys = ON")
+        except sqlite3.Error as e:
+            raise RuntimeError(
+                f"Impossible de configurer la base de données : {e}"
+            ) from e
         
         # Vérification si la base est vide (pas de tables)
         # Pourquoi : Détecte si c'est la première création de la base
-        cursor = self._connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='classe'"
-        )
+        try:
+            cursor = self._connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='classe'"
+            )
+        except sqlite3.Error as e:
+            raise RuntimeError(
+                f"Impossible de vérifier le schéma de la base de données : {e}"
+            ) from e
         
         # Si la table classe n'existe pas, la base est vide : initialiser le schéma
         if cursor.fetchone() is None:
