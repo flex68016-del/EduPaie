@@ -26,13 +26,14 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QStackedWidget, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPixmap
 from edupaie.data.database import Database
 from edupaie.services.student_service import StudentService
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.ui.students_view import StudentsView
 from edupaie.ui.dashboard import Dashboard
 from edupaie.ui.theme import refresh_style
+from edupaie.utils.paths import resource_path
 
 
 class MainWindow(QMainWindow):
@@ -115,15 +116,14 @@ class MainWindow(QMainWindow):
         sidebar_layout.setContentsMargins(10, 20, 10, 20)
         sidebar_layout.setSpacing(10)
         
-        # Titre de l'application
-        title_label = QLabel("EduPaie")
-        title_label.setObjectName("sidebarTitle")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_font = QFont()
-        title_font.setPointSize(18)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
-        sidebar_layout.addWidget(title_label)
+        # Logo de l'application
+        logo_label = QLabel()
+        logo_path = resource_path("edupaie/assets/edupaie-logo.svg")
+        logo_pixmap = QPixmap(str(logo_path))
+        logo_pixmap = logo_pixmap.scaled(180, 60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        logo_label.setPixmap(logo_pixmap)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sidebar_layout.addWidget(logo_label)
         
         # Séparateur
         separator = QFrame()
