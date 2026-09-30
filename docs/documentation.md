@@ -9,27 +9,58 @@
 │                     UI (Couche Présentation)                   │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
 │  │students_view│  │payment_dialog│  │  dashboard   │       │
+│  │student_form │  │student_detail│  │ main_window  │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                              ↓ (signaux/slots)
 ┌─────────────────────────────────────────────────────────────┐
 │                  Services (Couche Métier)                    │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
 │  │student_service│ │payment_service│ │receipt_service│       │
+│  │dashboard_service│               │               │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
+│              ┌──────────────┐                               │
+│              │  exceptions  │                               │
+│              └──────────────┘                               │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                              ↓ (appels repository)
 ┌─────────────────────────────────────────────────────────────┐
 │                    Data (Couche Accès Données)               │
-│  ┌──────────────┐  ┌──────────────┐                        │
-│  │student_repo  │  │payment_repo  │                        │
-│  └──────────────┘  └──────────────┘                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │student_repo  │  │payment_repo  │  │  database    │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                              ↓ (SQL)
 ┌─────────────────────────────────────────────────────────────┐
 │                     SQLite (Base de données)                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │   classe     │  │    eleve     │  │  paiement    │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Flux de données
+
+```
+Utilisateur
+    ↓ (clics, saisies)
+UI (PySide6)
+    ↓ (signaux Qt)
+Services (logique métier)
+    ↓ (appels repository)
+Data (SQL)
+    ↓ (requêtes)
+SQLite
+```
+
+### Diagramme d'architecture détaillé
+
+Voir le fichier `docs/architecture.drawio` pour le diagramme d'architecture détaillé avec :
+- Flux de données entre couches
+- Dépendances entre modules
+- Points d'entrée (main.py)
+- Gestion des erreurs
+- Signal/slot Qt
 
 ### Règles d'architecture
 
