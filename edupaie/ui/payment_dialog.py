@@ -203,13 +203,46 @@ class PaymentDialog(QDialog):
         
         self.btn_cancel = QPushButton("Annuler")
         self.btn_cancel.setMinimumHeight(35)
+        # Bouton gris pour annuler
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #9E9E9E;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #757575;
+            }
+            QPushButton:pressed {
+                background-color: #616161;
+            }
+        """)
         # Connexion signal -> slot : clic -> fermeture sans validation
         self.btn_cancel.clicked.connect(self.reject)
         buttons_layout.addWidget(self.btn_cancel)
         
         self.btn_validate = QPushButton("Valider")
         self.btn_validate.setMinimumHeight(35)
-        self.btn_validate.setStyleSheet("background-color: #4CAF50; color: white;")
+        # Bouton vert pour valider
+        self.btn_validate.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """)
         # Connexion signal -> slot : clic -> validation et enregistrement
         self.btn_validate.clicked.connect(self._on_validate_clicked)
         buttons_layout.addWidget(self.btn_validate)

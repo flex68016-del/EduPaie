@@ -191,16 +191,46 @@ class StudentForm(QDialog):
             "Modifier" if self.is_edit_mode else "Créer"
         )
         self.btn_validate.setMinimumHeight(35)
-        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
-        self.btn_validate.setStyleSheet("color: white;")
+        # Bouton vert pour créer/modifier
+        self.btn_validate.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """)
         # Connexion signal -> slot : clic bouton -> validation du formulaire
         # Pourquoi clicked.connect : Mécanisme signal/slot de Qt pour réagir aux événements
         self.btn_validate.clicked.connect(self._on_validate)
         
         self.btn_cancel = QPushButton("Annuler")
         self.btn_cancel.setMinimumHeight(35)
-        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
-        self.btn_cancel.setStyleSheet("color: white;")
+        # Bouton gris pour annuler
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #9E9E9E;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #757575;
+            }
+            QPushButton:pressed {
+                background-color: #616161;
+            }
+        """)
         # Connexion signal -> slot : clic bouton -> fermeture du formulaire sans sauvegarder
         self.btn_cancel.clicked.connect(self.reject)
         

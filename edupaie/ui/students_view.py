@@ -180,24 +180,77 @@ class StudentsView(QWidget):
         
         self.btn_add = QPushButton("Ajouter")
         self.btn_add.setMinimumHeight(35)
-        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
-        self.btn_add.setStyleSheet("color: white;")
+        # Bouton vert pour ajouter
+        self.btn_add.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """)
         # Connexion signal -> slot : clic -> ouverture formulaire d'ajout
         self.btn_add.clicked.connect(self._on_add_clicked)
         
         self.btn_edit = QPushButton("Modifier")
         self.btn_edit.setMinimumHeight(35)
         self.btn_edit.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
-        self.btn_edit.setStyleSheet("color: white;")
+        # Bouton bleu pour modifier
+        self.btn_edit.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #0b7dda;
+            }
+            QPushButton:pressed {
+                background-color: #0a5f8f;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
         # Connexion signal -> slot : clic -> ouverture formulaire de modification
         self.btn_edit.clicked.connect(self._on_edit_clicked)
         
         self.btn_delete = QPushButton("Supprimer")
         self.btn_delete.setMinimumHeight(35)
         self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        # Couleur du texte en blanc pour lisibilité (override stylesheet global)
-        self.btn_delete.setStyleSheet("color: white;")
+        # Bouton rouge pour supprimer
+        self.btn_delete.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #da190b;
+            }
+            QPushButton:pressed {
+                background-color: #b71c1c;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
         # Connexion signal -> slot : clic -> suppression de l'élève sélectionné
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         
