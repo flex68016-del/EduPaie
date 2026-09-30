@@ -117,6 +117,7 @@ class MainWindow(QMainWindow):
         
         # Titre de l'application
         title_label = QLabel("EduPaie")
+        title_label.setObjectName("sidebarTitle")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_font = QFont()
         title_font.setPointSize(18)

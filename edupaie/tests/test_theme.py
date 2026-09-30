@@ -19,7 +19,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import pytest
-from edupaie.ui.theme import STATUS, TEXT, TEXT_MUTED, TEXT_DISABLED, BG_APP, SURFACE
+from edupaie.ui.theme import STATUS, TEXT, TEXT_MUTED, TEXT_DISABLED, BG_APP, SURFACE, SIDEBAR_TEXT, SIDEBAR
 
 
 def wcag_contrast_ratio(hex_fg: str, hex_bg: str) -> float:
@@ -88,6 +88,13 @@ def test_text_on_background_contrast():
     # Texte atténué sur fond de surface
     ratio = wcag_contrast_ratio(TEXT_MUTED, SURFACE)
     assert ratio >= 4.5, f"Contraste insuffisant TEXT_MUTED/SURFACE: {ratio:.2f}"
+
+
+def test_sidebar_text_contrast():
+    """Vérifie le contraste du texte de la barre latérale sur son fond."""
+    # Texte de la barre latérale (blanc) sur fond de la barre latérale (bleu foncé)
+    ratio = wcag_contrast_ratio(SIDEBAR_TEXT, SIDEBAR)
+    assert ratio >= 4.5, f"Contraste insuffisant SIDEBAR_TEXT/SIDEBAR: {ratio:.2f}"
 
 
 def test_no_local_styles_in_ui_files():
