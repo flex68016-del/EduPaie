@@ -34,7 +34,7 @@ from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.error_handler import handle_slot_errors
 from edupaie.ui.theme import (
     format_fcfa, TEXT, TEXT_MUTED, SURFACE, BORDER,
-    ACCENT, ACCENT_2, DANGER, refresh_style
+    ACCENT, ACCENT_2, DANGER, BG_APP, refresh_style
 )
 from edupaie.ui.icons import icon
 from edupaie.ui.receipt_preview_dialog import ReceiptPreviewDialog
