@@ -6,12 +6,13 @@ REM Rôle : Automatise la construction de l'exécutable Windows autonome.
 REM =============================================================================
 REM Pourquoi ce script : Simplifie la construction de l'exécutable en une seule
 REM commande, évite d'oublier des options PyInstaller importantes.
+REM Pourquoi .venv-build : Environnement de build propre pour réduire la taille
+REM de l'exécutable (pas de dépendances inutiles du Python global).
 REM =============================================================================
 REM
 REM Prérequis :
 REM - Python 3.10+ installé
-REM - PyInstaller installé : pip install pyinstaller
-REM - Dependencies installées : pip install -r requirements.txt
+REM - Le script crée automatiquement .venv-build si nécessaire
 REM =============================================================================
 REM
 REM Commande d'exécution :
@@ -28,30 +29,39 @@ echo Construction de l'exécutable EduPaie avec PyInstaller
 echo ========================================================================
 echo.
 
-REM Vérification de l'installation de PyInstaller
-REM Pourquoi : Si PyInstaller n'est pas installé, la construction échouera
-REM Pourquoi utiliser le venv : Utilise l'environnement virtuel du projet
-REM Pourquoi pip show avec venv : Vérifie si PyInstaller est installé dans le venv
-"%~dp0venv\Scripts\python.exe" -m pip show pyinstaller >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERREUR] PyInstaller n'est pas installe dans le venv.
-    echo Installation en cours...
-    "%~dp0venv\Scripts\python.exe" -m pip install pyinstaller
+REM Création du venv de build s'il n'existe pas
+REM Pourquoi .venv-build : Environnement isolé pour éviter les dépendances inutiles
+REM Pourquoi --clear : Crée un venv propre pour assurer la reproductibilité
+if not exist ".venv-build" (
+    echo Creation de l'environnement de build (.venv-build)...
+    python -m venv .venv-build
     if %errorlevel% neq 0 (
-        echo [ERREUR] Impossible d'installer PyInstaller.
-        echo Veuillez executer : venv\Scripts\python.exe -m pip install pyinstaller
+        echo [ERREUR] Impossible de creer le venv.
         pause
         exit /b 1
     )
+    echo [OK] Environnement de build cree.
+    echo.
 )
 
-echo [OK] PyInstaller est installe.
+REM Installation des dépendances dans le venv de build
+REM Pourquoi PySide6 et non PySide6-Essentials : QtPdf/QtPdfWidgets nécessaires pour l'aperçu
+REM Pourquoi fpdf2 : Génération des reçus PDF
+REM Pourquoi pyinstaller : Construction de l'exécutable
+echo Installation des dependances dans .venv-build...
+"%~dp0.venv-build\Scripts\python.exe" -m pip install --upgrade pip --quiet
+"%~dp0.venv-build\Scripts\python.exe" -m pip install PySide6 fpdf2 pyinstaller --quiet
+if %errorlevel% neq 0 (
+    echo [ERREUR] Impossible d'installer les dependances.
+    pause
+    exit /b 1
+)
+
+echo [OK] Dependances installees.
 echo.
 
 REM Vérification de l'existence du fichier de spec
 REM Pourquoi : Le fichier .spec contient toute la configuration PyInstaller
-REM Pourquoi --onefile : Crée un seul fichier .exe (plus facile à distribuer)
-REM Pourquoi --windowed : Crée une application graphique (pas de console DOS)
 if not exist "edupaie.spec" (
     echo [ERREUR] Le fichier edupaie.spec n'existe pas.
     echo Le fichier .spec est necessaire pour construire l'executable.
@@ -63,12 +73,12 @@ echo [OK] Fichier edupaie.spec trouve.
 echo.
 
 REM Construction de l'exécutable avec PyInstaller
-REM Pourquoi edupaie.spec : Utilise la configuration avec collect_all()
+REM Pourquoi edupaie.spec : Utilise la configuration optimisée avec exclusions
 REM Pourquoi --clean : Nettoie le dossier de construction avant reconstruction
 REM Pourquoi --noconfirm : Confirme automatiquement le remplacement des fichiers
-REM Pourquoi utiliser le venv : Utilise l'environnement virtuel du projet
+REM Pourquoi .venv-build : Utilise l'environnement de build propre
 echo Construction de l'executable...
-"%~dp0venv\Scripts\python.exe" -m PyInstaller --clean --noconfirm edupaie.spec
+"%~dp0.venv-build\Scripts\python.exe" -m PyInstaller --clean --noconfirm edupaie.spec
 if %errorlevel% neq 0 (
     echo [ERREUR] La construction a echoue.
     echo Verifiez les erreurs ci-dessus.
