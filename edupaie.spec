@@ -33,9 +33,34 @@ hiddenimports = []
 tmp_ret = collect_all('edupaie')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
-# Collecter PySide6 (sera filtré ensuite pour exclure les modules inutiles)
+# Collecter PySide6 avec collect_all (revient à l'approche originale)
+# Pourquoi collect_all : Garantit que tous les plugins et dépendances nécessaires sont inclus
+# collect_submodules ne collecte pas les plugins nécessaires (imageformats, platforms, etc.)
 tmp_ret = collect_all('PySide6')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
+# Filtrer les données pour exclure les éléments inutiles
+# Pourquoi qml, include, metatypes : Non utilisés par EduPaie (pas de QML)
+# Pourquoi translations : Non nécessaires (interface uniquement en français)
+def filter_datas(datas):
+    """Filtre les données inutiles pour réduire la taille."""
+    patterns_to_exclude = [
+        'PySide6/qml',  # EduPaie n'utilise pas QML
+        'PySide6/include',  # Headers non nécessaires en production
+        'translations',  # Non nécessaires (interface uniquement en français)
+    ]
+    filtered = []
+    for data in datas:
+        exclude = False
+        for pattern in patterns_to_exclude:
+            if pattern.lower() in str(data[0]).lower():
+                exclude = True
+                break
+        if not exclude:
+            filtered.append(data)
+    return filtered
+
+datas = filter_datas(datas)
 
 
 a = Analysis(
