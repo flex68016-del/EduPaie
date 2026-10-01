@@ -34,7 +34,7 @@ from edupaie.ui.students_view import StudentsView
 from edupaie.ui.dashboard import Dashboard
 from edupaie.ui.theme import (
     refresh_style, SIDEBAR_TOP, SIDEBAR_BOTTOM, SIDEBAR_TEXT,
-    SIDENT_ACTIVE_BG, TEXT, SURFACE, BORDER, HOVER_ROW
+    TEXT, SURFACE, BORDER, HOVER_ROW
 )
 from edupaie.ui.icons import icon
 from edupaie.utils.paths import resource_path

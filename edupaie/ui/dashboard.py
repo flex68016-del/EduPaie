@@ -35,8 +35,7 @@ from edupaie.ui.error_handler import handle_slot_errors
 from edupaie.ui.theme import (
     STATUS, format_fcfa, TEXT, TEXT_MUTED, TEXT_SUBTLE,
     SURFACE, BG_APP, ACCENT, ACCENT_2, BORDER,
-    ICON_TINT_BLUE, ICON_TINT_GREEN, ICON_TINT_AMBER, ICON_TINT_RED,
-    add_shadow, refresh_style
+    ICON_TINTS, add_shadow, refresh_style
 )
 from edupaie.ui.icons import icon
 
@@ -215,19 +214,19 @@ class Dashboard(QWidget):
         kpi_layout.setSpacing(16)
         
         # Carte 1 : Nombre d'élèves
-        self.card_eleves = self._create_kpi_card("Élèves", "0", "users", ICON_TINT_BLUE, "18 élèves inscrits")
+        self.card_eleves = self._create_kpi_card("Élèves", "0", "users", ICON_TINTS["blue"], "18 élèves inscrits")
         kpi_layout.addWidget(self.card_eleves)
         
         # Carte 2 : Total encaissé
-        self.card_encaisse = self._create_kpi_card("Encaissé", "0 FCFA", "wallet", ICON_TINT_GREEN, "sur 1 035 000 FCFA dus")
+        self.card_encaisse = self._create_kpi_card("Encaissé", "0 FCFA", "wallet", ICON_TINTS["green"], "sur 1 035 000 FCFA dus")
         kpi_layout.addWidget(self.card_encaisse)
         
         # Carte 3 : Restant dû
-        self.card_restant = self._create_kpi_card("Restant dû", "0 FCFA", "alert", ICON_TINT_AMBER, "en attente de paiement")
+        self.card_restant = self._create_kpi_card("Restant dû", "0 FCFA", "alert", ICON_TINTS["amber"], "en attente de paiement")
         kpi_layout.addWidget(self.card_restant)
         
         # Carte 4 : Élèves non soldés
-        self.card_non_soldes = self._create_kpi_card("Non soldés", "0", "alert", ICON_TINT_RED, "paiements en retard")
+        self.card_non_soldes = self._create_kpi_card("Non soldés", "0", "alert", ICON_TINTS["red"], "paiements en retard")
         kpi_layout.addWidget(self.card_non_soldes)
         
         layout.addLayout(kpi_layout)
