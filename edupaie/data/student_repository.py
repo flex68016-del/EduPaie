@@ -302,6 +302,36 @@ class StudentRepository:
             row = cursor.fetchone()
             return row['nom'] if row else None
     
+    def add_class(self, nom: str) -> int:
+        """
+        Ajoute une nouvelle classe dans la base de données.
+        
+        Args:
+            nom: Nom de la classe (ex: "6ème A", "5ème B")
+        
+        Returns:
+            L'identifiant de la classe nouvellement créée.
+        
+        Raises:
+            sqlite3.IntegrityError: Si une classe avec le même nom existe déjà (contrainte UNIQUE)
+        
+        Pourquoi l'INSERT avec RETURNING : Permet de récupérer l'ID auto-incrémenté
+        directement après l'insertion sans faire une requête supplémentaire.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : insertion d'une nouvelle classe
+            # Pourquoi les paramètres "?" : Protection contre les injections SQL
+            cursor.execute(
+                """INSERT INTO classe (nom)
+                   VALUES (?)
+                   RETURNING id""",
+                (nom,)
+            )
+            
+            # Récupération de l'ID généré
+            result = cursor.fetchone()
+            return result['id'] if result else cursor.lastrowid
+    
     # ===== Section : Requêtes d'agrégation pour le tableau de bord =====
     
     def count_all_students(self) -> int:

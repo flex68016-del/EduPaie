@@ -23,7 +23,7 @@ sys.path.insert(0, str(project_root))
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
-    QFileDialog
+    QFileDialog, QFrame, QProgressBar
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QColor
@@ -33,7 +33,12 @@ from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.payment_dialog import PaymentDialog
 from edupaie.ui.receipt_preview_dialog import ReceiptPreviewDialog
 from edupaie.ui.error_handler import handle_slot_errors
-from edupaie.ui.theme import STATUS, format_fcfa, TEXT
+from edupaie.ui.theme import (
+    STATUS, format_fcfa, TEXT, TEXT_MUTED, TEXT_SUBTLE,
+    SURFACE, BG_APP, BORDER, ACCENT, ACCENT_2,
+    add_shadow, refresh_style
+)
+from edupaie.ui.icons import icon
 
 
 class StudentDetail(QDialog):
@@ -87,162 +92,283 @@ class StudentDetail(QDialog):
     
     def _create_ui(self) -> None:
         """
-        Crée l'interface utilisateur de la fiche.
+        Crée l'interface utilisateur premium de la fiche.
         
         Crée :
-        - Section informations de l'élève
-        - Section informations financières avec statut coloré
-        - Tableau des paiements
-        - Bouton Fermer
+        - Header avec grand avatar, nom, pastilles de classe et statut
+        - 3 cartes KPI (Total dû, Payé, Solde)
+        - Barre de progression du paiement
+        - Tableau des paiements premium
+        - Boutons d'action (Nouveau paiement, Aperçu, Enregistrer PDF, Imprimer)
         """
         # Layout principal
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
-        # ===== Section : Informations de l'élève =====
-        info_layout = QVBoxLayout()
+        # ===== Section : Header =====
+        header_layout = QHBoxLayout()
         
-        # Nom et prénom
+        # Avatar grand (cercle 64 px)
+        self.avatar_label = QLabel()
+        self.avatar_label.setFixedSize(64, 64)
+        self.avatar_label.setStyleSheet(f"""
+            QLabel {{
+                background: {ACCENT};
+                border-radius: 32px;
+                color: white;
+                font-size: 24px;
+                font-weight: bold;
+            }}
+        """)
+        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(self.avatar_label)
+        
+        # Nom et pastilles
+        name_layout = QVBoxLayout()
+        
         self.nom_label = QLabel()
-        nom_font = QFont()
-        nom_font.setPointSize(16)
-        nom_font.setBold(True)
-        self.nom_label.setFont(nom_font)
-        info_layout.addWidget(self.nom_label)
+        self.nom_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {TEXT};")
+        name_layout.addWidget(self.nom_label)
         
-        # Classe et année scolaire
+        pastilles_layout = QHBoxLayout()
+        pastilles_layout.setSpacing(8)
+        
         self.classe_label = QLabel()
-        info_layout.addWidget(self.classe_label)
+        self.classe_label.setStyleSheet(f"""
+            QLabel {{
+                background: {BG_APP};
+                color: {TEXT_MUTED};
+                padding: 4px 12px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 500;
+            }}
+        """)
+        pastilles_layout.addWidget(self.classe_label)
         
-        layout.addLayout(info_layout)
-        
-        # Séparateur
-        separator = QLabel("─" * 50)
-        separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(separator)
-        
-        # ===== Section : Informations financières =====
-        finance_layout = QVBoxLayout()
-        
-        # Total dû
-        self.total_label = QLabel()
-        total_font = QFont()
-        total_font.setPointSize(12)
-        total_font.setBold(True)
-        self.total_label.setFont(total_font)
-        finance_layout.addWidget(self.total_label)
-        
-        # Payé
-        self.paye_label = QLabel()
-        finance_layout.addWidget(self.paye_label)
-        
-        # Solde
-        self.solde_label = QLabel()
-        solde_font = QFont()
-        solde_font.setPointSize(12)
-        solde_font.setBold(True)
-        self.solde_label.setFont(solde_font)
-        finance_layout.addWidget(self.solde_label)
-        
-        # Statut avec couleur
         self.statut_label = QLabel()
-        statut_font = QFont()
-        statut_font.setPointSize(14)
-        statut_font.setBold(True)
-        self.statut_label.setFont(statut_font)
-        self.statut_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        finance_layout.addWidget(self.statut_label)
+        self.statut_label.setStyleSheet(f"""
+            QLabel {{
+                padding: 4px 12px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 600;
+            }}
+        """)
+        pastilles_layout.addWidget(self.statut_label)
         
-        layout.addLayout(finance_layout)
+        name_layout.addLayout(pastilles_layout)
+        header_layout.addLayout(name_layout)
+        header_layout.addStretch()
         
-        # Séparateur
-        separator2 = QLabel("─" * 50)
-        separator2.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(separator2)
+        layout.addLayout(header_layout)
+        
+        # ===== Section : 3 cartes KPI =====
+        kpi_layout = QHBoxLayout()
+        kpi_layout.setSpacing(12)
+        
+        # Carte Total dû
+        self.card_total = self._create_kpi_card("Total dû", "0 FCFA", "#475569")
+        kpi_layout.addWidget(self.card_total)
+        
+        # Carte Payé
+        self.card_paye = self._create_kpi_card("Payé", "0 FCFA", "#16A34A")
+        kpi_layout.addWidget(self.card_paye)
+        
+        # Carte Solde
+        self.card_solde = self._create_kpi_card("Solde", "0 FCFA", "#DC2626")
+        kpi_layout.addWidget(self.card_solde)
+        
+        layout.addLayout(kpi_layout)
+        
+        # ===== Section : Barre de progression =====
+        progress_layout = QVBoxLayout()
+        progress_label = QLabel("Progression du paiement")
+        progress_label.setStyleSheet(f"font-size: 12px; font-weight: 600; color: {TEXT_SUBTLE};")
+        progress_layout.addWidget(progress_label)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background: {BG_APP};
+                border: none;
+                border-radius: 10px;
+                height: 8px;
+                text-align: center;
+            }}
+            QProgressBar::chunk {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {ACCENT}, stop:1 {ACCENT_2});
+                border-radius: 10px;
+            }}
+        """)
+        self.progress_bar.setTextVisible(False)
+        progress_layout.addWidget(self.progress_bar)
+        
+        self.progress_percentage = QLabel("0%")
+        self.progress_percentage.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        self.progress_percentage.setAlignment(Qt.AlignmentFlag.AlignRight)
+        progress_layout.addWidget(self.progress_percentage)
+        
+        layout.addLayout(progress_layout)
         
         # ===== Section : Historique des paiements =====
-        paiements_label = QLabel("Historique des paiements :")
-        layout.addWidget(paiements_label)
+        history_label = QLabel("Historique des paiements")
+        history_label.setStyleSheet(f"font-size: 14px; font-weight: 600; color: {TEXT};")
+        layout.addWidget(history_label)
         
         self.paiements_table = QTableWidget()
         self.paiements_table.setColumnCount(5)
         self.paiements_table.setHorizontalHeaderLabels([
-            "N° Reçu", "Date", "Mode", "Montant (FCFA)", "Solde après (FCFA)"
+            "N° Reçu", "Date", "Mode", "Montant", "Solde après"
         ])
         
-        # Configuration du tableau
+        # Configuration du tableau premium
         self.paiements_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.paiements_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.paiements_table.setAlternatingRowColors(True)
         self.paiements_table.setSortingEnabled(True)
-        
-        # Masquer les numéros de ligne
         self.paiements_table.verticalHeader().setVisible(False)
-        
-        # Définir la hauteur des lignes
-        self.paiements_table.verticalHeader().setDefaultSectionSize(36)
+        self.paiements_table.verticalHeader().setDefaultSectionSize(48)
         
         # Ajustement des colonnes
         header = self.paiements_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # N° Reçu
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Date
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Mode
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Montant
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Solde après
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         
-        # Connexion signal -> slot : sélection -> activation des boutons de reçu
+        # Connexion signal -> slot
         self.paiements_table.itemSelectionChanged.connect(self._on_selection_changed)
-        
-        # Connexion signal -> slot : double-clic -> ouvrir l'aperçu
         self.paiements_table.cellDoubleClicked.connect(self._on_table_double_clicked)
         
         layout.addWidget(self.paiements_table)
-        
-        # Espaceur
-        layout.addStretch()
         
         # ===== Boutons =====
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
         
-        # Bouton Aperçu (actif quand une ligne est sélectionnée)
-        self.btn_preview_receipt = QPushButton("Aperçu")
-        self.btn_preview_receipt.setProperty("variant", "primary")
-        self.btn_preview_receipt.setEnabled(False)  # Désactivé par défaut
-        self.btn_preview_receipt.clicked.connect(self._on_preview_receipt_clicked)
-        buttons_layout.addWidget(self.btn_preview_receipt)
-        
-        # Bouton Enregistrer le PDF (secondaire)
-        self.btn_save_receipt = QPushButton("Enregistrer le PDF")
-        self.btn_save_receipt.setProperty("variant", "secondary")
-        self.btn_save_receipt.setEnabled(False)  # Désactivé par défaut
-        self.btn_save_receipt.clicked.connect(self._on_save_receipt_clicked)
-        buttons_layout.addWidget(self.btn_save_receipt)
-        
-        # Bouton Imprimer (secondaire)
-        self.btn_print_receipt = QPushButton("Imprimer")
-        self.btn_print_receipt.setProperty("variant", "secondary")
-        self.btn_print_receipt.setEnabled(False)  # Désactivé par défaut
-        self.btn_print_receipt.clicked.connect(self._on_print_receipt_clicked)
-        buttons_layout.addWidget(self.btn_print_receipt)
-        
-        self.btn_new_payment = QPushButton("Nouveau paiement")
-        self.btn_new_payment.setProperty("variant", "primary")
+        self.btn_new_payment = QPushButton("+ Nouveau paiement")
+        self.btn_new_payment.setIcon(icon("plus", "#FFFFFF", 16))
+        self.btn_new_payment.setProperty("button_type", "primary")
         self.btn_new_payment.clicked.connect(self._on_new_payment_clicked)
         buttons_layout.addWidget(self.btn_new_payment)
         
+        self.btn_preview_receipt = QPushButton(icon("eye", TEXT_MUTED, 16), "Aperçu")
+        self.btn_preview_receipt.setProperty("button_type", "secondary")
+        self.btn_preview_receipt.setEnabled(False)
+        self.btn_preview_receipt.clicked.connect(self._on_preview_receipt_clicked)
+        buttons_layout.addWidget(self.btn_preview_receipt)
+        
+        self.btn_save_receipt = QPushButton(icon("download", TEXT_MUTED, 16), "Enregistrer")
+        self.btn_save_receipt.setProperty("button_type", "secondary")
+        self.btn_save_receipt.setEnabled(False)
+        self.btn_save_receipt.clicked.connect(self._on_save_receipt_clicked)
+        buttons_layout.addWidget(self.btn_save_receipt)
+        
+        self.btn_print_receipt = QPushButton(icon("printer", TEXT_MUTED, 16), "Imprimer")
+        self.btn_print_receipt.setProperty("button_type", "secondary")
+        self.btn_print_receipt.setEnabled(False)
+        self.btn_print_receipt.clicked.connect(self._on_print_receipt_clicked)
+        buttons_layout.addWidget(self.btn_print_receipt)
+        
         self.btn_close = QPushButton("Fermer")
-        self.btn_close.setProperty("variant", "secondary")
+        self.btn_close.setProperty("button_type", "secondary")
         self.btn_close.clicked.connect(self.accept)
         buttons_layout.addWidget(self.btn_close)
         
         layout.addLayout(buttons_layout)
+        
+        # Appliquer le style premium
+        self._apply_premium_style()
+    
+    def _create_kpi_card(self, title: str, value: str, color: str) -> QFrame:
+        """
+        Crée une carte KPI premium simple.
+        
+        Args:
+            title: Titre de la carte.
+            value: Valeur initiale.
+            color: Couleur de la valeur.
+        
+        Returns:
+            QFrame configuré comme carte KPI.
+        """
+        card = QFrame()
+        card.setStyleSheet(f"""
+            QFrame {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(16, 12, 16, 12)
+        
+        title_label = QLabel(title)
+        title_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED}; font-weight: 500;")
+        layout.addWidget(title_label)
+        
+        value_label = QLabel(value)
+        value_label.setStyleSheet(f"font-size: 18px; color: {color}; font-weight: bold;")
+        layout.addWidget(value_label)
+        
+        card.setLayout(layout)
+        
+        # Stockage de la référence
+        card.value_label = value_label
+        
+        return card
+    
+    def _apply_premium_style(self) -> None:
+        """
+        Applique le style premium aux widgets.
+        """
+        # Style du tableau
+        table_style = f"""
+            QTableWidget {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 12px;
+                gridline-color: {BORDER};
+                selection-background-color: {BG_APP};
+            }}
+            QTableWidget::item {{
+                padding: 8px;
+                border-bottom: 1px solid {BORDER};
+            }}
+            QTableWidget::item:selected {{
+                background: {BG_APP};
+                color: {TEXT};
+            }}
+            QHeaderView::section {{
+                background: {SURFACE};
+                border: none;
+                border-bottom: 1px solid {BORDER};
+                padding: 8px;
+                font-size: 9px;
+                font-weight: bold;
+                color: {TEXT_SUBTLE};
+                text-transform: uppercase;
+            }}
+        """
+        self.paiements_table.setStyleSheet(table_style)
+        
+        # Style des boutons
+        refresh_style(self.btn_new_payment)
+        refresh_style(self.btn_preview_receipt)
+        refresh_style(self.btn_save_receipt)
+        refresh_style(self.btn_print_receipt)
+        refresh_style(self.btn_close)
     
     def _load_student_data(self) -> None:
         """
         Charge et affiche les données de l'élève.
         
         Récupère les informations de l'élève avec solde et statut,
-        puis remplit les labels et le tableau des paiements.
+        puis remplit les widgets premium et le tableau des paiements.
         """
         try:
             # Récupération des données de l'élève
@@ -253,23 +379,49 @@ class StudentDetail(QDialog):
                 self.reject()
                 return
             
-            # Affichage des informations de l'élève
-            self.nom_label.setText(f"{student['nom']} {student['prenom']}")
-            self.classe_label.setText(f"Classe : {student['nom_classe']} | Année scolaire : {student['annee_scolaire']}")
+            # Affichage du nom
+            self.nom_label.setText(f"{student['prenom']} {student['nom']}")
+            
+            # Affichage de la classe
+            self.classe_label.setText(student['nom_classe'])
+            
+            # Avatar avec initiales
+            initiales = f"{student['prenom'][0]}{student['nom'][0]}".upper()
+            self.avatar_label.setText(initiales)
             
             # Calcul du montant payé
             total_paye = student['total_du'] - student['solde']
             
-            # Affichage des informations financières
-            self.total_label.setText(f"Total dû : {format_fcfa(student['total_du'])}")
-            self.paye_label.setText(f"Payé : {format_fcfa(total_paye)}")
-            self.solde_label.setText(f"Solde : {format_fcfa(student['solde'])}")
+            # Mise à jour des cartes KPI
+            self.card_total.value_label.setText(format_fcfa(student['total_du']))
+            self.card_paye.value_label.setText(format_fcfa(total_paye))
+            self.card_solde.value_label.setText(format_fcfa(student['solde']))
+            
+            # Couleur du solde selon le montant
+            if student['solde'] == 0:
+                self.card_solde.value_label.setStyleSheet(f"font-size: 18px; color: #16A34A; font-weight: bold;")
+            else:
+                self.card_solde.value_label.setStyleSheet(f"font-size: 18px; color: #DC2626; font-weight: bold;")
             
             # Affichage du statut avec couleur (fond ET texte pour contraste WCAG)
             statut = student['statut']
             statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
-            self.statut_label.setText(f"Statut : {statut}")
-            self.statut_label.setStyleSheet(f"color: {statut_colors['fg']}; background-color: {statut_colors['bg']}; padding: 10px; border-radius: 5px; font-weight: bold;")
+            self.statut_label.setText(statut)
+            self.statut_label.setStyleSheet(f"""
+                QLabel {{
+                    background: {statut_colors["bg"]};
+                    color: {statut_colors["fg"]};
+                    padding: 4px 12px;
+                    border-radius: 999px;
+                    font-size: 11px;
+                    font-weight: 600;
+                }}
+            """)
+            
+            # Barre de progression
+            percentage = (total_paye / student['total_du'] * 100) if student['total_du'] > 0 else 0
+            self.progress_bar.setValue(int(percentage))
+            self.progress_percentage.setText(f"{int(percentage)}%")
             
             # Chargement des paiements
             self._load_paiements()
@@ -324,6 +476,8 @@ class StudentDetail(QDialog):
                 # Solde après
                 solde_item = QTableWidgetItem(format_fcfa(paiement['solde_apres']))
                 solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                if paiement['solde_apres'] > 0:
+                    solde_item.setForeground(QColor("#991B1B"))  # Rouge foncé si solde positif
                 self.paiements_table.setItem(row, 4, solde_item)
             
             self.paiements_table.setSortingEnabled(True)
