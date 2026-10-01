@@ -23,15 +23,14 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
-    QTableWidgetItem, QHeaderView, QComboBox, QFrame, QPushButton,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QHeaderView, QComboBox, QFrame, QPushButton,
     QGridLayout
 )
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QFont, QColor, QPainter, QPen, QRadialGradient, QBrush
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.services.student_service import StudentService
-from edupaie.ui.error_handler import handle_slot_errors
 from edupaie.ui.theme import (
     STATUS, format_fcfa, TEXT, TEXT_MUTED, TEXT_SUBTLE,
     SURFACE, BG_APP, ACCENT, ACCENT_2, BORDER, DANGER,
@@ -200,13 +199,6 @@ class Dashboard(QWidget):
         header_layout.addLayout(title_date_layout)
         header_layout.addStretch()
         
-        # Bouton "Nouveau paiement"
-        self.btn_new_payment = QPushButton("+ Nouveau paiement")
-        self.btn_new_payment.setIcon(icon("plus", "#FFFFFF", 16))
-        self.btn_new_payment.setProperty("button_type", "primary")
-        self.btn_new_payment.clicked.connect(self._on_new_payment)
-        header_layout.addWidget(self.btn_new_payment)
-        
         layout.addLayout(header_layout)
         
         # ===== Section : Cartes KPI =====
@@ -244,71 +236,6 @@ class Dashboard(QWidget):
         row2_layout.addWidget(self.card_derniers_paiements, stretch=1)
         
         layout.addLayout(row2_layout)
-        
-        # ===== Section : Filtres en chips =====
-        filters_layout = QHBoxLayout()
-        filters_layout.setSpacing(8)
-        
-        self.filter_tous = QPushButton("Tous")
-        self.filter_tous.setCheckable(True)
-        self.filter_tous.setChecked(True)
-        self.filter_tous.setProperty("filter_chip", True)
-        self.filter_tous.setProperty("active", True)
-        self.filter_tous.clicked.connect(lambda: self._on_filter_chip("Tous"))
-        filters_layout.addWidget(self.filter_tous)
-        
-        self.filter_soldes = QPushButton("Soldés")
-        self.filter_soldes.setCheckable(True)
-        self.filter_soldes.setProperty("filter_chip", True)
-        self.filter_soldes.setProperty("active", False)
-        self.filter_soldes.clicked.connect(lambda: self._on_filter_chip("Soldé"))
-        filters_layout.addWidget(self.filter_soldes)
-        
-        self.filter_partiels = QPushButton("Partiels")
-        self.filter_partiels.setCheckable(True)
-        self.filter_partiels.setProperty("filter_chip", True)
-        self.filter_partiels.setProperty("active", False)
-        self.filter_partiels.clicked.connect(lambda: self._on_filter_chip("Partiellement payé"))
-        filters_layout.addWidget(self.filter_partiels)
-        
-        self.filter_non_payes = QPushButton("Non payés")
-        self.filter_non_payes.setCheckable(True)
-        self.filter_non_payes.setProperty("filter_chip", True)
-        self.filter_non_payes.setProperty("active", False)
-        self.filter_non_payes.clicked.connect(lambda: self._on_filter_chip("Non payé"))
-        filters_layout.addWidget(self.filter_non_payes)
-        
-        filters_layout.addStretch()
-        layout.addLayout(filters_layout)
-        
-        # ===== Section : Tableau des élèves =====
-        self.students_table = QTableWidget()
-        self.students_table.setColumnCount(6)
-        self.students_table.setHorizontalHeaderLabels([
-            "Élève", "Classe", "Total dû", "Payé", "Solde", "Statut"
-        ])
-        
-        # Configuration du tableau
-        self.students_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.students_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.students_table.setSortingEnabled(True)
-        
-        # Masquer les numéros de ligne
-        self.students_table.verticalHeader().setVisible(False)
-        
-        # Définir la hauteur des lignes (56 px premium)
-        self.students_table.verticalHeader().setDefaultSectionSize(56)
-        
-        # Ajustement des colonnes
-        header = self.students_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Élève
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Classe
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Total dû
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Payé
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Solde
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Statut
-        
-        layout.addWidget(self.students_table)
         
         self.setLayout(layout)
         
@@ -516,39 +443,8 @@ class Dashboard(QWidget):
         
         Pourquoi : Sépare le style de la création de l'interface pour une meilleure lisibilité.
         """
-        # Style des boutons de filtre (chips)
-        chip_style = f"""
-            QPushButton {{
-                background: transparent;
-                border: 1px solid {BORDER};
-                border-radius: 999px;
-                color: {TEXT_MUTED};
-                padding: 8px 16px;
-                font-size: 12px;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background: {BG_APP};
-            }}
-            QPushButton:checked {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {ACCENT}, stop:1 {ACCENT_2});
-                color: white;
-                border: none;
-            }}
-        """
-        
-        self.filter_tous.setStyleSheet(chip_style)
-        self.filter_soldes.setStyleSheet(chip_style)
-        self.filter_partiels.setStyleSheet(chip_style)
-        self.filter_non_payes.setStyleSheet(chip_style)
-        
-        refresh_style(self.filter_tous)
-        refresh_style(self.filter_soldes)
-        refresh_style(self.filter_partiels)
-        refresh_style(self.filter_non_payes)
+        # Appliquer le style premium
     
-    @handle_slot_errors
     def _load_dashboard_data(self) -> None:
         """
         Charge et affiche les données du tableau de bord premium.
@@ -579,81 +475,8 @@ class Dashboard(QWidget):
         self.card_recouvrement.partiels_count.setText(str(stats.get('partiels', 0)))
         self.card_recouvrement.non_payes_count.setText(str(stats.get('non_payes', 0)))
         
-        # Chargement de la liste des élèves
-        self._load_students_table()
-        
         # Chargement des derniers paiements
         self._load_derniers_paiements()
-    
-    def _load_students_table(self) -> None:
-        """
-        Charge et affiche la liste des élèves dans le tableau premium.
-        
-        Récupère la liste enrichie des élèves (avec solde et statut) via
-        student_service.get_students_with_solde_and_statut() et l'affiche
-        dans le tableau avec le filtre de statut appliqué.
-        
-        Pourquoi cette méthode : Sépare le chargement des KPI du chargement
-        de la liste pour permettre des rafraîchissements sélectifs.
-        """
-        # Récupération du filtre de statut actif
-        statut_filter = self._get_active_filter()
-        
-        # Récupération de la liste enrichie des élèves
-        students = self.student_service.get_students_with_solde_and_statut()
-        
-        # Filtrage par statut
-        if statut_filter != "Tous":
-            students = [s for s in students if s['statut'] == statut_filter]
-        
-        # Remplissage du tableau
-        self.students_table.setSortingEnabled(False)
-        self.students_table.setRowCount(0)
-        
-        for row, student in enumerate(students):
-            self.students_table.insertRow(row)
-            
-            # Élève (avatar + nom complet)
-            # Pour l'instant, on utilise le nom complet sans avatar (avatar sera ajouté avec delegate)
-            nom_complet = f"{student['prenom']} {student['nom']}"
-            eleve_item = QTableWidgetItem(nom_complet)
-            self.students_table.setItem(row, 0, eleve_item)
-            
-            # Classe
-            classe_item = QTableWidgetItem(student['nom_classe'])
-            self.students_table.setItem(row, 1, classe_item)
-            
-            # Total dû
-            total_du_item = QTableWidgetItem(format_fcfa(student['total_du']))
-            total_du_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.students_table.setItem(row, 2, total_du_item)
-            
-            # Payé
-            total_paye = student['total_du'] - student['solde']
-            paye_item = QTableWidgetItem(format_fcfa(total_paye))
-            paye_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.students_table.setItem(row, 3, paye_item)
-            
-            # Solde (en rouge si positif)
-            solde_item = QTableWidgetItem(format_fcfa(student['solde']))
-            solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            if student['solde'] > 0:
-                solde_item.setForeground(QColor("#991B1B"))  # Rouge foncé pour le solde restant
-            self.students_table.setItem(row, 4, solde_item)
-            
-            # Statut avec couleur (fond ET texte pour contraste WCAG)
-            statut = student['statut']
-            statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
-            statut_item = QTableWidgetItem(statut)
-            statut_item.setBackground(QColor(statut_colors["bg"]))
-            statut_item.setForeground(QColor(statut_colors["fg"]))
-            statut_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-            font = statut_item.font()
-            font.setBold(True)
-            statut_item.setFont(font)
-            self.students_table.setItem(row, 5, statut_item)
-        
-        self.students_table.setSortingEnabled(True)
     
     def _load_derniers_paiements(self) -> None:
         """
@@ -688,10 +511,11 @@ class Dashboard(QWidget):
             self.derniers_paiements_layout.addStretch()
             
         except Exception as e:
-            # En cas d'erreur, afficher un message
-            error_label = QLabel("Erreur lors du chargement")
+            # En cas d'erreur, afficher un message avec le détail
+            error_label = QLabel(f"Erreur: {str(e)}")
             error_label.setStyleSheet(f"color: {DANGER}; font-size: 12px;")
             self.derniers_paiements_layout.addWidget(error_label)
+            print(f"Erreur lors du chargement des derniers paiements: {e}")
     
     def _create_paiement_row(self, paiement: dict) -> QFrame:
         """
@@ -749,66 +573,6 @@ class Dashboard(QWidget):
         layout.addWidget(montant_label)
         
         return row
-    
-    def _get_active_filter(self) -> str:
-        """
-        Retourne le filtre de statut actuellement actif.
-        
-        Returns:
-            Le statut actif ("Tous", "Soldé", "Partiellement payé", "Non payé").
-        """
-        if self.filter_tous.isChecked():
-            return "Tous"
-        elif self.filter_soldes.isChecked():
-            return "Soldé"
-        elif self.filter_partiels.isChecked():
-            return "Partiellement payé"
-        elif self.filter_non_payes.isChecked():
-            return "Non payé"
-        return "Tous"
-    
-    @handle_slot_errors
-    def _on_filter_chip(self, statut: str) -> None:
-        """
-        Gère le clic sur un chip de filtre.
-        
-        Args:
-            statut: Statut sélectionné ("Tous", "Soldé", "Partiellement payé", "Non payé").
-        
-        Pourquoi : Met à jour l'état des chips et rafraîchit le tableau.
-        """
-        # Mettre à jour l'état des chips
-        self.filter_tous.setProperty("active", statut == "Tous")
-        self.filter_soldes.setProperty("active", statut == "Soldé")
-        self.filter_partiels.setProperty("active", statut == "Partiellement payé")
-        self.filter_non_payes.setProperty("active", statut == "Non payé")
-        
-        self.filter_tous.setChecked(statut == "Tous")
-        self.filter_soldes.setChecked(statut == "Soldé")
-        self.filter_partiels.setChecked(statut == "Partiellement payé")
-        self.filter_non_payes.setChecked(statut == "Non payé")
-        
-        refresh_style(self.filter_tous)
-        refresh_style(self.filter_soldes)
-        refresh_style(self.filter_partiels)
-        refresh_style(self.filter_non_payes)
-        
-        # Rafraîchir le tableau
-        self._load_students_table()
-    
-    @handle_slot_errors
-    def _on_new_payment(self) -> None:
-        """
-        Gère le clic sur le bouton "Nouveau paiement".
-        
-        Pourquoi : Ouvre le dialogue de paiement pour un nouvel élève.
-        
-        Note : Pour l'instant, affiche un message car le dialogue sera
-        implémenté dans la vue élèves.
-        """
-        # Placeholder : pour l'instant, on redirige vers la vue élèves
-        # Plus tard, on pourra ouvrir directement le dialogue de paiement
-        pass
     
     def refresh(self) -> None:
         """

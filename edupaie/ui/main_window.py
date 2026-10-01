@@ -29,6 +29,7 @@ from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QFont, QPixmap, QIcon
 from edupaie.data.database import Database
 from edupaie.services.student_service import StudentService
+from edupaie.services.payment_service import PaymentService
 from edupaie.services.dashboard_service import DashboardService
 from edupaie.ui.students_view import StudentsView
 from edupaie.ui.dashboard import Dashboard
@@ -93,9 +94,11 @@ class MainWindow(QMainWindow):
         # Pourquoi : Les services sont partagés entre les pages et doivent être initialisés
         self.database = Database()
         self.student_service = StudentService(self.database)
+        self.payment_service = PaymentService(self.database)
         self.dashboard_service = DashboardService(
             self.student_service.repository,
-            self.student_service.payment_repository
+            self.student_service.payment_repository,
+            self.payment_service
         )
         
         # Création du widget central
@@ -273,7 +276,7 @@ class MainWindow(QMainWindow):
         
         # Page Élèves (vue complète)
         # Pourquoi StudentsView : Vue complète avec tableau, recherche, filtre et actions CRUD
-        students_page = StudentsView(self.student_service)
+        students_page = StudentsView(self.student_service, self.payment_service)
         # Connexion signal -> slot : paiement effectué -> rafraîchissement tableau de bord
         # Pourquoi connecter à la page tableau de bord : Le KPI doit refléter le nouveau paiement
         students_page.payment_made.connect(lambda: self._refresh_dashboard())

@@ -23,6 +23,8 @@ sys.path.insert(0, str(project_root))
 
 from edupaie.data.student_repository import StudentRepository
 from edupaie.data.payment_repository import PaymentRepository
+from edupaie.services.payment_service import PaymentService
+from edupaie.data.database import Database
 
 
 class DashboardService:
@@ -41,16 +43,19 @@ class DashboardService:
     """
     
     def __init__(self, student_repository: StudentRepository,
-                 payment_repository: PaymentRepository) -> None:
+                 payment_repository: PaymentRepository,
+                 payment_service: PaymentService = None) -> None:
         """
         Initialise le service avec les repositories nécessaires.
         
         Args:
             student_repository: Repository pour accéder aux données des élèves.
             payment_repository: Repository pour accéder aux données des paiements.
+            payment_service: Service pour les opérations de paiement (optionnel).
         """
         self.student_repository = student_repository
         self.payment_repository = payment_repository
+        self.payment_service = payment_service
     
     def dashboard_stats(self) -> Dict[str, Any]:
         """
@@ -97,11 +102,17 @@ class DashboardService:
         # doivent encore payer
         eleves_non_soldes = self._count_students_with_balance()
         
+        # Répartition par statut
+        soldes, partiels, non_payes = self._count_by_statut()
+        
         return {
             "nombre_eleves": nombre_eleves,
             "total_encaisse": total_encaisse,
             "total_restant_du": total_restant_du,
-            "eleves_non_soldes": eleves_non_soldes
+            "eleves_non_soldes": eleves_non_soldes,
+            "soldes": soldes,
+            "partiels": partiels,
+            "non_payes": non_payes
         }
     
     def _count_students_with_balance(self) -> int:
@@ -132,3 +143,40 @@ class DashboardService:
             )
             result = cursor.fetchone()
             return result['nombre'] if result else 0
+    
+    def _count_by_statut(self) -> tuple:
+        """
+        Compte le nombre d'élèves par statut de paiement.
+        
+        Returns:
+            Tuple (soldes, partiels, non_payes) avec les comptes correspondants.
+        
+        Pourquoi cette méthode : Permet d'afficher la répartition des statuts
+        dans la carte Recouvrement du tableau de bord.
+        """
+        with self.student_repository.database.transaction() as cursor:
+            # Récupérer tous les élèves avec leur statut
+            cursor.execute("""
+                SELECT 
+                    e.id,
+                    e.total_du,
+                    COALESCE((SELECT SUM(p.montant) FROM paiement p WHERE p.eleve_id = e.id), 0) as total_paye,
+                    (SELECT COUNT(*) FROM paiement WHERE eleve_id = e.id) as nombre_paiements
+                FROM eleve e
+            """)
+            
+            results = cursor.fetchall()
+            soldes = 0
+            partiels = 0
+            non_payes = 0
+            
+            for r in results:
+                solde = r['total_du'] - r['total_paye']
+                if solde == 0:
+                    soldes += 1
+                elif r['nombre_paiements'] > 0:
+                    partiels += 1
+                else:
+                    non_payes += 1
+            
+            return soldes, partiels, non_payes

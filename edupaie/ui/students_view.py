@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QPoint
 from PySide6.QtGui import QColor, QFont, QPainter, QBrush, QPen
 from edupaie.services.student_service import StudentService
+from edupaie.services.payment_service import PaymentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 from edupaie.ui.student_form import StudentForm
@@ -71,16 +72,18 @@ class StudentsView(QWidget):
     # Pourquoi Signal : Permet de notifier le tableau de bord pour rafraîchissement
     payment_made = Signal()
     
-    def __init__(self, student_service: StudentService) -> None:
+    def __init__(self, student_service: StudentService, payment_service: PaymentService = None) -> None:
         """
         Initialise la vue des élèves.
         
         Args:
             student_service: Instance du service pour les opérations métier
+            payment_service: Instance du service pour les paiements (optionnel)
         """
         super().__init__()
         
         self.student_service = student_service
+        self.payment_service = payment_service
         self.current_students = []  # Liste des élèves actuellement affichés
         
         # Création de l'interface
