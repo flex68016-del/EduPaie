@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QStackedWidget, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QPixmap
+from PySide6.QtGui import QFont, QPixmap, QIcon
 from edupaie.data.database import Database
 from edupaie.services.student_service import StudentService
 from edupaie.services.dashboard_service import DashboardService
@@ -66,6 +66,15 @@ class MainWindow(QMainWindow):
         # Pourquoi ces dimensions : Taille raisonnable pour une application desktop
         self.setWindowTitle("EduPaie - Gestion des Paiements Scolaires")
         self.setMinimumSize(1000, 700)
+        
+        # Icône de l'application
+        # Pourquoi : Affiche l'icône dans la barre de titre et le gestionnaire de tâches
+        icon_path = resource_path("edupaie/assets/edupaie-icon.svg")
+        try:
+            self.setWindowIcon(QIcon(icon_path))
+        except Exception:
+            # Fallback : Si l'icône ne charge pas, l'application fonctionne quand même
+            pass
         
         # Initialisation des services
         # Pourquoi : Les services sont partagés entre les pages et doivent être initialisés

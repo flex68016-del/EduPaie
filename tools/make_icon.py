@@ -1,87 +1,39 @@
-#!/usr/bin/env python3
-# =============================================================================
-# make_icon.py - Génération de l'icône .ico à partir du SVG
-# =============================================================================
-# Rôle : Convertir l'icône SVG en format ICO pour l'exécutable Windows
-# =============================================================================
-# Ce fichier utilise :
-# - PySide6.QSvgRenderer pour charger le SVG
-# - PySide6.QPainter pour dessiner l'image
-# - PySide6.QIcon pour créer l'icône
-# =============================================================================
-# Pourquoi ce script : Windows nécessite un fichier .ico pour l'icône de l'exécutable
-# PyInstaller peut utiliser directement un .ico comme icône de l'exécutable
-# =============================================================================
+"""
+Script pour convertir l'icône SVG en ICO pour PyInstaller
+PyInstaller ne peut pas convertir directement SVG en ICO, donc nous devons
+créer un fichier .ico manuellement.
+Utilise cairosvg et PIL (Pillow) qui sont déjà installés.
+"""
 
-import sys
 from pathlib import Path
+from PIL import Image
+import cairosvg
+import io
 
-# Ajout du répertoire parent au PYTHONPATH
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# Chemins
+script_dir = Path(__file__).parent.parent
+svg_path = script_dir / "edupaie" / "assets" / "edupaie-icon.svg"
+ico_path = script_dir / "edupaie" / "assets" / "edupaie-icon.ico"
 
-from PySide6.QtGui import QIcon, QPainter, QPixmap
-from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtCore import Qt
+# Tailles pour l'icône Windows
+icon_sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+icon_images = []
 
+print(f"[INFO] Conversion de {svg_path} vers ICO...")
 
-def svg_to_ico(svg_path: Path, ico_path: Path, sizes: list = None) -> None:
-    """
-    Convertit un fichier SVG en fichier ICO avec plusieurs tailles.
+for size in icon_sizes:
+    # Convertir SVG → PNG avec la taille souhaitée
+    png_data = cairosvg.svg2png(url=str(svg_path), output_width=size[0], output_height=size[1])
     
-    Args:
-        svg_path: Chemin vers le fichier SVG source
-        ico_path: Chemin vers le fichier ICO de destination
-        sizes: Liste des tailles d'icônes à générer (défaut: [16, 32, 48, 64, 128, 256])
-    
-    Pourquoi plusieurs tailles : Windows utilise différentes tailles d'icônes
-    selon l'affichage (barre des tâches, explorateur, bureau, etc.)
-    """
-    if sizes is None:
-        sizes = [16, 32, 48, 64, 128, 256]
-    
-    # Chargement du SVG
-    # Pourquoi QSvgRenderer : Permet de rendre un SVG sur un QPixmap
-    renderer = QSvgRenderer(str(svg_path))
-    
-    if not renderer.isValid():
-        raise ValueError(f"Le fichier SVG n'est pas valide : {svg_path}")
-    
-    # Création de l'icône avec plusieurs tailles
-    # Pourquoi QIcon : Conteneur d'icônes avec plusieurs résolutions
-    icon = QIcon()
-    
-    for size in sizes:
-        # Création d'un QPixmap carré de la taille demandée
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        
-        # Dessin du SVG sur le QPixmap
-        # Pourquoi QPainter : Permet de dessiner le SVG sur le pixmap
-        painter = QPainter(pixmap)
-        renderer.render(painter)
-        painter.end()
-        
-        # Ajout de la taille à l'icône
-        icon.addPixmap(pixmap)
-    
-    # Sauvegarde de l'icône en format ICO
-    # Pourquoi .ico : Format d'icône Windows standard
-    ico_path.parent.mkdir(parents=True, exist_ok=True)
-    icon.write(str(ico_path))
-    
-    print(f"[OK] Icône générée : {ico_path}")
-    print(f"[OK] Tailles incluses : {sizes}")
+    # Ouvrir l'image PIL depuis les bytes
+    img = Image.open(io.BytesIO(png_data))
+    icon_images.append(img)
 
+# Sauvegarder en .ico
+icon_images[0].save(
+    str(ico_path),
+    format='ICO',
+    sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+)
 
-if __name__ == "__main__":
-    # Chemins des fichiers
-    # Pourquoi edupaie/assets : Dossier des ressources de l'application
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent
-    svg_path = project_root / "edupaie" / "assets" / "edupaie-icon.svg"
-    ico_path = project_root / "edupaie" / "assets" / "edupaie.ico"
-    
-    # Génération de l'icône
-    print(f"Génération de l'icône : {svg_path} -> {ico_path}")
-    svg_to_ico(svg_path, ico_path)
+print(f"[INFO] Icône créée : {ico_path}")
