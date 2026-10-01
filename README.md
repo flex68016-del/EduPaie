@@ -5,12 +5,15 @@ Application desktop de gestion des paiements scolaires pour établissements scol
 ## Fonctionnalités
 
 - **Gestion des élèves** : Ajout, modification, suppression, recherche, filtrage par classe
+- **Gestion des classes** : Création de nouvelles classes
 - **Enregistrement des paiements** : Paiements avec numérotation automatique de reçus
 - **Calcul automatique du solde** : Solde calculé automatiquement à chaque paiement
 - **Statuts de paiement** : Soldé (vert), Partiellement payé (orange), Non payé (rouge)
 - **Historique des paiements** : Historique complet avec réimpression de reçus
 - **Génération de reçus PDF** : Reçus professionnels générés automatiquement
-- **Tableau de bord** : Vue d'ensemble avec KPI (nombre d'élèves, total encaissé, total restant, non soldés)
+- **Aperçu des reçus** : Aperçu PDF intégré, enregistrement et impression
+- **Tableau de bord** : Vue d'ensemble avec KPI, jauge circulaire et derniers paiements
+- **Interface premium** : Design moderne inspiré de Stripe, Linear et Notion
 
 ## Installation pour le développement
 
@@ -219,6 +222,10 @@ EduPaie/
 - **v0.8.1-fix** : Correction des erreurs de syntaxe
 - **v0.8.2-fix2** : Correction des erreurs d'exécution (slots Qt, couleurs)
 - **v0.8.3-fix3** : Correction du slot montant et noms réalistes
+- **v0.9-apercu** : Aperçu PDF intégré, enregistrement et impression
+- **v0.10-design** : Refonte visuelle premium (inspiré de Stripe, Linear, Notion)
+- **v0.11-design** : Refonte visuelle complète + création de classes + derniers paiements
+- **v0.12-exe-leger** : Optimisation de l'exécutable (237 Mo, -22 Mo)
 
 ## Documentation
 

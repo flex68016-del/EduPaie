@@ -19,7 +19,23 @@
 Au premier lancement, l'application :
 - Crée automatiquement le dossier de données dans `%APPDATA%\EduPaie`
 - Copie la base de données modèle dans ce dossier
-- Initialise le fichier de log `edupaie.log`
+- Initialise le fichier de log `edupaie_errors.log`
+
+### Taille de l'exécutable
+
+- **Version optimisée** : ~237 Mo (v0.12-exe-leger)
+- **Réduction** : -22 Mo (-8.5%) par rapport à la version originale (259 Mo)
+
+Note : La taille reste importante car PySide6 complet est nécessaire pour les fonctionnalités d'aperçu PDF (QtPdf, QtPdfWidgets). L'installateur Inno Setup peut être utilisé pour une distribution compressée (~30-40 Mo).
+
+### Interface utilisateur
+
+L'interface utilise un design premium inspiré de Stripe, Linear et Notion :
+- Palette de couleurs claire forcée (indépendante du thème Windows)
+- Typographie Inter ou Segoe UI
+- Cartes avec ombres douces et rayons premium
+- Navigation par barre latérale avec transitions fluides
+- Tableau de bord avec KPI, jauge circulaire et derniers paiements
 
 ### Emplacement des données
 
