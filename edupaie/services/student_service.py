@@ -342,6 +342,32 @@ class StudentService:
         """
         return self.repository.list_classes()
     
+    def add_class(self, nom: str) -> int:
+        """
+        Ajoute une nouvelle classe avec validation.
+        
+        Args:
+            nom: Nom de la classe (ex: "6ème A", "5ème B")
+        
+        Returns:
+            L'identifiant de la classe nouvellement créée.
+        
+        Raises:
+            ValidationError: Si le nom est vide ou invalide.
+        
+        Pourquoi cette méthode : Permet de créer dynamiquement de nouvelles classes
+        sans avoir à modifier directement la base de données.
+        """
+        # Validation du nom
+        if not nom or not nom.strip():
+            raise ValidationError("Le nom de la classe ne peut pas être vide.")
+        
+        if len(nom.strip()) < 2:
+            raise ValidationError("Le nom de la classe doit contenir au moins 2 caractères.")
+        
+        # Ajout via le repository
+        return self.repository.add_class(nom.strip())
+    
     def get_student_with_class_name(self, eleve_id: int) -> Optional[Dict[str, Any]]:
         """
         Récupère un élève avec le nom de sa classe au lieu de l'ID.

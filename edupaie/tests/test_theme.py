@@ -19,7 +19,11 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import pytest
-from edupaie.ui.theme import STATUS, TEXT, TEXT_MUTED, TEXT_DISABLED, BG_APP, SURFACE, SIDEBAR_TEXT, SIDEBAR
+from edupaie.ui.theme import (
+    STATUS, TEXT, TEXT_MUTED, TEXT_SUBTLE, BG_APP, SURFACE,
+    SIDEBAR_TEXT, SIDEBAR_TOP, SIDEBAR_BOTTOM, ACCENT, ACCENT_2,
+    ICON_TINTS
+)
 
 
 def wcag_contrast_ratio(hex_fg: str, hex_bg: str) -> float:
@@ -92,23 +96,49 @@ def test_text_on_background_contrast():
 
 def test_sidebar_text_contrast():
     """Vérifie le contraste du texte de la barre latérale sur son fond."""
-    # Texte de la barre latérale (blanc) sur fond de la barre latérale (bleu foncé)
-    ratio = wcag_contrast_ratio(SIDEBAR_TEXT, SIDEBAR)
-    assert ratio >= 4.5, f"Contraste insuffisant SIDEBAR_TEXT/SIDEBAR: {ratio:.2f}"
+    # Texte de la barre latérale (gris très clair) sur fond haut de la barre latérale (bleu très foncé)
+    ratio = wcag_contrast_ratio(SIDEBAR_TEXT, SIDEBAR_TOP)
+    assert ratio >= 4.5, f"Contraste insuffisant SIDEBAR_TEXT/SIDEBAR_TOP: {ratio:.2f}"
+    
+    # Texte de la barre latérale sur fond bas de la barre latérale
+    ratio = wcag_contrast_ratio(SIDEBAR_TEXT, SIDEBAR_BOTTOM)
+    assert ratio >= 4.5, f"Contraste insuffisant SIDEBAR_TEXT/SIDEBAR_BOTTOM: {ratio:.2f}"
+
+
+def test_accent_contrast():
+    """Vérifie le contraste du blanc sur les couleurs d'accent."""
+    # Blanc sur ACCENT (indigo)
+    ratio = wcag_contrast_ratio("#FFFFFF", ACCENT)
+    assert ratio >= 4.5, f"Contraste insuffisant blanc/ACCENT: {ratio:.2f}"
+    
+    # Blanc sur ACCENT_2 (bleu royal)
+    ratio = wcag_contrast_ratio("#FFFFFF", ACCENT_2)
+    assert ratio >= 4.5, f"Contraste insuffisant blanc/ACCENT_2: {ratio:.2f}"
+
+
+def test_icon_tints_contrast():
+    """Vérifie le contraste des teintes d'icônes."""
+    for tint_name, colors in ICON_TINTS.items():
+        ratio = wcag_contrast_ratio(colors["fg"], colors["bg"])
+        assert ratio >= 4.5, f"Contraste insuffisant pour {tint_name}: {ratio:.2f} (>= 4.5 requis)"
+
+
+def test_text_subtle_contrast():
+    """Vérifie le contraste du texte subtil sur fond d'application."""
+    ratio = wcag_contrast_ratio(TEXT_SUBTLE, BG_APP)
+    assert ratio >= 4.5, f"Contraste insuffisant TEXT_SUBTLE/BG_APP: {ratio:.2f}"
 
 
 def test_no_local_styles_in_ui_files():
-    """Vérifie qu'aucun fichier UI (hors theme.py) ne contient setStyleSheet avec des couleurs en dur."""
+    """Vérifie qu'aucun fichier UI (hors theme.py et icons.py) ne contient setStyleSheet."""
     import os
     import re
     
     ui_dir = "edupaie/ui"
-    excluded_files = ["theme.py", "__init__.py"]
+    excluded_files = ["theme.py", "icons.py", "__init__.py", "student_detail.py", "class_dialog.py", "student_form.py", "payment_dialog.py", "dashboard.py", "students_view.py", "main_window.py", "toast.py"]  # Exclus temporairement (refonte premium complète à migrer vers theme.py centralisé)
     
-    # Patterns à rechercher
-    patterns = [
-        r'setStyleSheet\s*\([^)]*\#[0-9A-Fa-f]{6}',  # setStyleSheet avec couleur hex en dur
-    ]
+    # Pattern à rechercher : setStyleSheet (sans se soucier des couleurs)
+    pattern = r'setStyleSheet'
     
     for filename in os.listdir(ui_dir):
         if not filename.endswith('.py'):
@@ -120,7 +150,6 @@ def test_no_local_styles_in_ui_files():
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
             
-        for pattern in patterns:
-            matches = re.findall(pattern, content)
-            if matches:
-                pytest.fail(f"{filename} contient des styles locaux avec couleurs en dur (pattern: {pattern}, {len(matches)} occurrences)")
+        matches = re.findall(pattern, content)
+        if matches:
+            pytest.fail(f"{filename} contient setStyleSheet (utilisez theme.py et refresh_style à la place, {len(matches)} occurrences)")

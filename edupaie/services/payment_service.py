@@ -310,3 +310,28 @@ class PaymentService:
         paiements = self.payment_repository.list_by_student(eleve_id)
         
         return paiements
+    
+    def derniers_paiements(self, limite: int = 6) -> list:
+        """
+        Récupère les derniers paiements avec les informations de l'élève.
+        
+        Args:
+            limite: Nombre maximum de paiements à retourner (défaut: 6).
+        
+        Returns:
+            Liste de dictionnaires contenant les informations des paiements
+            avec les détails de l'élève. Chaque dictionnaire contient :
+            id, montant, date_paiement, mode, numero_recu, solde_apres,
+            eleve_nom, eleve_prenom, eleve_classe.
+            La liste est triée par date décroissante (plus récent en premier).
+        
+        Pourquoi cette méthode : Permet d'afficher les derniers paiements
+        sur le tableau de bord avec le nom de l'élève associé.
+        
+        Pourquoi limite=6 par défaut : Affiche les 6 paiements les plus récents
+        sur le tableau de bord sans surcharger l'interface.
+        """
+        # Récupération via le repository
+        paiements = self.payment_repository.derniers_paiements(limite)
+        
+        return paiements

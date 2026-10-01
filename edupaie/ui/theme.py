@@ -1,13 +1,15 @@
 # =============================================================================
-# theme.py - Thème visuel centralisé EduPaie
+# theme.py - Thème visuel centralisé EduPaie (Premium)
 # =============================================================================
 # Rôle : Définit toutes les constantes de couleurs, la palette Qt et le QSS
 # centralisé pour l'application. Force un mode clair cohérent quel que soit
 # le thème système (Windows sombre/clair).
+# Inspiration : Stripe, Linear, Notion
 # =============================================================================
 # Ce fichier utilise :
-# - PySide6.QtGui pour QPalette, QColor, QFont
+# - PySide6.QtGui pour QPalette, QColor, QFont, QGraphicsDropShadowEffect
 # - PySide6.QtCore pour Qt
+# - PySide6.QtWidgets pour QWidget
 # =============================================================================
 # Ce fichier est utilisé par :
 # - main.py pour appliquer la palette et le QSS global
@@ -16,45 +18,40 @@
 
 from PySide6.QtGui import QPalette, QColor, QFont
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QGraphicsDropShadowEffect
+from pathlib import Path
 
 
 # =============================================================================
-# CONSTANTES DE COULEURS
+# CONSTANTES DE COULEURS PREMIUM
 # =============================================================================
-# Pourquoi ces couleurs : Palette cohérente inspirée de Tailwind CSS et
-# Material Design pour une interface moderne et lisible. Le mode clair est
-# forcé pour éviter les problèmes de lisibilité sur Windows en mode sombre.
+# Pourquoi ces couleurs : Palette inspirée de Stripe, Linear et Notion pour
+# un look moderne et haut de gamme. Le mode clair est forcé pour éviter
+# les problèmes de lisibilité sur Windows en mode sombre.
 # =============================================================================
 
 # Couleurs de fond et surface
-BG_APP = "#F3F5F9"           # Fond principal de l'application (gris très clair)
+BG_APP = "#F5F6FA"           # Fond principal de l'application (gris très clair)
 SURFACE = "#FFFFFF"          # Surface des widgets (blanc)
-BORDER = "#D0D7E2"           # Bordures (gris moyen)
-FOCUS = "#2563EB"            # Couleur de focus (bleu vif)
+BORDER = "#E6E8F0"           # Bordures (gris clair)
+HOVER_ROW = "#F1F5FF"        # Survol de ligne (bleu très clair)
 
 # Couleurs de texte
-TEXT = "#1F2937"             # Texte principal (gris très foncé)
-TEXT_MUTED = "#4B5563"       # Texte secondaire (gris moyen)
-TEXT_DISABLED = "#6B7280"    # Texte désactivé (gris clair)
+TEXT = "#0F172A"             # Texte principal (bleu gris très foncé)
+TEXT_MUTED = "#475569"       # Texte secondaire (gris moyen)
+TEXT_SUBTLE = "#52607A"      # Texte subtil (gris clair)
 
-# Couleurs de la barre latérale
-SIDEBAR = "#16233B"          # Fond de la barre latérale (bleu très foncé)
-SIDEBAR_HOVER = "#23365A"    # Survol de la barre latérale (bleu foncé)
-SIDEBAR_TEXT = "#FFFFFF"     # Texte de la barre latérale (blanc pour contraste sur fond foncé)
-SIDEBAR_SEPARATOR = "#2F4468"  # Séparateur de la barre latérale (bleu moyen)
+# Couleurs d'accent (dégradé ACCENT -> ACCENT_2)
+ACCENT = "#4F46E5"           # Accent principal (indigo)
+ACCENT_2 = "#2563EB"        # Accent secondaire (bleu royal)
 
-# Couleurs primaires
-PRIMARY = "#2563EB"          # Couleur principale (bleu)
-PRIMARY_HOVER = "#1D4ED8"    # Survol principal (bleu foncé)
+# Couleurs de la barre latérale (dégradé vertical)
+SIDEBAR_TOP = "#0B1220"      # Haut de la barre latérale (bleu très foncé)
+SIDEBAR_BOTTOM = "#16213A"   # Bas de la barre latérale (bleu foncé)
+SIDEBAR_TEXT = "#E2E8F0"     # Texte de la barre latérale (gris très clair)
 
 # Couleurs de danger
 DANGER = "#DC2626"           # Couleur de danger (rouge)
-DANGER_HOVER = "#B91C1C"     # Survol danger (rouge foncé)
-
-# Couleurs de sélection
-SELECTION_BG = "#DBEAFE"     # Fond de sélection (bleu très clair)
-ROW_ALT = "#F8FAFC"          # Fond alterné des lignes (gris très clair)
-HEADER_BG = "#E8EDF5"        # Fond des en-têtes de tableau (gris clair)
 
 # Couleurs de statut (paire bg/fg pour contraste WCAG >= 4.5)
 STATUS = {
@@ -63,14 +60,118 @@ STATUS = {
         "fg": "#166534"      # Vert très foncé
     },
     "Partiellement payé": {
-        "bg": "#FEF3C7",     # Jaune très clair
-        "fg": "#92400E"      # Jaune très foncé
+        "bg": "#FEF3C7",     # Ambre très clair
+        "fg": "#92400E"      # Ambre très foncé
     },
     "Non payé": {
         "bg": "#FEE2E2",     # Rouge très clair
         "fg": "#991B1B"      # Rouge très foncé
     }
 }
+
+# Teintes des icônes de cartes (paire bg/fg pour contraste WCAG >= 4.5)
+ICON_TINTS = {
+    "blue": {
+        "bg": "#EEF2FF",     # Bleu très clair
+        "fg": "#4338CA"      # Bleu indigo foncé
+    },
+    "green": {
+        "bg": "#DCFCE7",     # Vert très clair
+        "fg": "#166534"      # Vert très foncé
+    },
+    "amber": {
+        "bg": "#FEF3C7",     # Ambre très clair
+        "fg": "#92400E"      # Ambre très foncé
+    },
+    "red": {
+        "bg": "#FEE2E2",     # Rouge très clair
+        "fg": "#991B1B"      # Rouge très foncé
+    }
+}
+
+
+# =============================================================================
+# TYPOGRAPHIE
+# =============================================================================
+# Pourquoi ces tailles : Hiérarchie visuelle claire pour guider l'œil
+# Titre de page 24 pt, sous-titre 11 pt, corps 10 pt, KPI 26 pt
+# =============================================================================
+
+# Rayons
+RADIUS_CARD = 16            # Rayon des cartes
+RADIUS_FIELD = 10           # Rayon des champs et boutons
+RADIUS_PILL = 999           # Rayon des pastilles (cercle complet)
+
+# Ombre douce des cartes
+def add_shadow(widget: QWidget) -> None:
+    """
+    Ajoute une ombre douce à un widget pour l'effet de profondeur.
+    
+    Utilise QGraphicsDropShadowEffect avec :
+    - Flou : 28 px
+    - Décalage vertical : 6 px
+    - Couleur : rgba(15, 23, 42, 0.08) (bleu gris très foncé, opacité 8%)
+    
+    Args:
+        widget: Le widget auquel ajouter l'ombre.
+    
+    Pourquoi cette ombre : Crée une hiérarchie visuelle et sépare les
+    cartes du fond, comme Stripe et Linear.
+    """
+    shadow = QGraphicsDropShadowEffect()
+    shadow.setBlurRadius(28)
+    shadow.setOffset(0, 6)
+    shadow.setColor(QColor(15, 23, 42, 8))  # rgba(15,23,42,0.08)
+    widget.setGraphicsEffect(shadow)
+
+
+# =============================================================================
+# CHARGEMENT DES POLICES
+# =============================================================================
+# Pourquoi Inter : Police moderne et lisible utilisée par Stripe et Linear
+# Fallback à Segoe UI si le dossier assets/fonts/ n'existe pas
+# =============================================================================
+
+_FONT_LOADED = False
+_FONT_FAMILY = "Segoe UI"  # Fallback par défaut
+
+def load_fonts() -> None:
+    """
+    Charge la police Inter depuis assets/fonts/ si disponible.
+    
+    Si assets/fonts/Inter-*.ttf existe, charge les variantes (Regular, Medium, Bold)
+    avec QFontDatabase. Sinon, utilise Segoe UI (fallback Windows).
+    
+    Pourquoi cette fonction : Permet d'utiliser Inter sans dépendance externe,
+    avec un fallback gracieux si les fichiers ne sont pas présents.
+    """
+    global _FONT_LOADED, _FONT_FAMILY
+    
+    try:
+        fonts_dir = Path(__file__).parent.parent / "assets" / "fonts"
+        if fonts_dir.exists():
+            from PySide6.QtGui import QFontDatabase
+            
+            # Charger les variantes Inter
+            font_files = [
+                "Inter-Regular.ttf",
+                "Inter-Medium.ttf",
+                "Inter-Bold.ttf"
+            ]
+            
+            for font_file in font_files:
+                font_path = fonts_dir / font_file
+                if font_path.exists():
+                    font_id = QFontDatabase.addApplicationFont(str(font_path))
+                    if font_id >= 0 and not _FONT_LOADED:
+                        _FONT_FAMILY = "Inter"
+                        _FONT_LOADED = True
+    except:
+        pass  # Fallback à Segoe UI en cas d'erreur
+
+
+# Charger les polices au démarrage
+load_fonts()
 
 
 # =============================================================================
@@ -124,24 +225,22 @@ def build_palette() -> QPalette:
     bg_app = QColor(BG_APP)
     surface = QColor(SURFACE)
     border = QColor(BORDER)
-    focus = QColor(FOCUS)
     text = QColor(TEXT)
     text_muted = QColor(TEXT_MUTED)
-    text_disabled = QColor(TEXT_DISABLED)
-    selection_bg = QColor(SELECTION_BG)
-    row_alt = QColor(ROW_ALT)
+    text_subtle = QColor(TEXT_SUBTLE)
+    accent = QColor(ACCENT)
     
     # ===== Groupe Active =====
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, bg_app)
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText, text)
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Base, surface)
-    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.AlternateBase, row_alt)
+    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.AlternateBase, QColor(HOVER_ROW))
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Text, text)
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Button, surface)
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.ButtonText, text)
-    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight, selection_bg)
-    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.HighlightedText, text)
-    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.PlaceholderText, text_disabled)
+    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight, accent)
+    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.PlaceholderText, text_subtle)
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.ToolTipBase, surface)
     palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.ToolTipText, text)
     
@@ -149,29 +248,29 @@ def build_palette() -> QPalette:
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, bg_app)
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.WindowText, text_muted)
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Base, surface)
-    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.AlternateBase, row_alt)
+    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.AlternateBase, QColor(HOVER_ROW))
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Text, text_muted)
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Button, surface)
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.ButtonText, text_muted)
-    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight, selection_bg)
-    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.HighlightedText, text_muted)
-    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.PlaceholderText, text_disabled)
+    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight, accent)
+    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.PlaceholderText, text_subtle)
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.ToolTipBase, surface)
     palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.ToolTipText, text_muted)
     
     # ===== Groupe Disabled =====
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, bg_app)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, text_disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, text_subtle)
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, surface)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.AlternateBase, row_alt)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, text_disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.AlternateBase, QColor(HOVER_ROW))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, text_subtle)
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Button, surface)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, text_disabled)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Highlight, selection_bg)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, text_disabled)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.PlaceholderText, text_disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, text_subtle)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Highlight, accent)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.PlaceholderText, text_subtle)
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ToolTipBase, surface)
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ToolTipText, text_disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ToolTipText, text_subtle)
     
     return palette
 
@@ -206,10 +305,12 @@ def build_stylesheet() -> str:
     Construit et retourne le QSS (Qt Style Sheet) centralisé.
     
     Définit les styles pour tous les widgets :
-    - Police Segoe UI 10pt
-    - Couleurs centralisées depuis les constantes
+    - Police Inter ou Segoe UI selon disponibilité
+    - Couleurs centralisées depuis les constantes premium
     - États hover, focus, disabled
-    - Variantes de boutons (primary, secondary, danger)
+    - Variantes de boutons (primary avec dégradé, secondary, danger, ghost)
+    - Rayons modernes (16px pour cartes, 10px pour champs, 999px pour pastilles)
+    - Scrollbars fines (8px)
     
     Returns:
         Le QSS complet sous forme de chaîne.
@@ -218,7 +319,7 @@ def build_stylesheet() -> str:
     /* ===== Styles globaux ===== */
     QWidget {{
         color: {TEXT};
-        font-family: "Segoe UI", Arial, sans-serif;
+        font-family: "{_FONT_FAMILY}", Arial, sans-serif;
         font-size: 10pt;
     }}
     
@@ -231,92 +332,75 @@ def build_stylesheet() -> str:
         background: transparent;
     }}
     
-    /* ===== Barre latérale ===== */
-    /* Pourquoi un sélecteur plus précis (#sidebar QLabel#sidebarTitle) :
-       La règle QLabel globale écraserait la couleur blanche du titre de la barre latérale.
-       En utilisant l'objectName du conteneur (#sidebar) ET du titre (#sidebarTitle),
-       on augmente la spécificité CSS pour que cette règle l'emporte sur la règle globale.
-       Fond foncé = texte blanc (règle d'or pour le contraste WCAG). */
-    QWidget#sidebar QLabel#sidebarTitle {{
-        color: {SIDEBAR_TEXT};
-        background: transparent;
-        font-size: 20pt;
-        font-weight: bold;
-        padding: 16px;
-    }}
-    
-    QWidget#sidebar QFrame[frameShape="4"] {{
-        /* Séparateur fin sous le titre */
-        background: {SIDEBAR_SEPARATOR};
-        max-height: 1px;
-        margin: 0 16px;
-    }}
-    
-    /* ===== Filtres et libellés ===== */
-    QLabel[isFilter="true"] {{
-        font-weight: bold;
-        color: {TEXT};
-    }}
-    
     /* ===== Champs de saisie ===== */
     QLineEdit, QComboBox, QDateEdit, QSpinBox {{
         background: {SURFACE};
         color: {TEXT};
         border: 1px solid {BORDER};
-        border-radius: 6px;
-        padding: 6px 10px;
-        min-height: 34px;
+        border-radius: {RADIUS_FIELD}px;
+        padding: 8px 12px;
+        min-height: 40px;
     }}
     
     QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QSpinBox:focus {{
-        border: 1px solid {FOCUS};
+        border: 1.5px solid {ACCENT};
+    }}
+    
+    QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled, QSpinBox:disabled {{
+        background: {BG_APP};
+        color: {TEXT_SUBTLE};
+        border: 1px solid {BORDER};
     }}
     
     QComboBox QAbstractItemView {{
         background: {SURFACE};
         color: {TEXT};
-        selection-background-color: {SELECTION_BG};
-        selection-color: {TEXT};
+        selection-background-color: {ACCENT};
+        selection-color: white;
         border: 1px solid {BORDER};
+        border-radius: {RADIUS_FIELD}px;
     }}
     
     /* ===== Boutons ===== */
     QPushButton {{
-        border-radius: 6px;
-        min-height: 36px;
-        padding: 5px 15px;
-        font-weight: bold;
+        border-radius: {RADIUS_FIELD}px;
+        min-height: 40px;
+        padding: 8px 20px;
+        font-weight: 600;
     }}
     
+    /* Bouton primary avec dégradé ACCENT -> ACCENT_2 */
     QPushButton[variant="primary"] {{
-        background: {PRIMARY};
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT}, stop:1 {ACCENT_2});
         color: white;
         border: none;
     }}
     
     QPushButton[variant="primary"]:hover {{
-        background: {PRIMARY_HOVER};
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT_2}, stop:1 {ACCENT});
     }}
     
     QPushButton[variant="primary"]:pressed {{
-        background: {PRIMARY};
+        background: {ACCENT};
     }}
     
+    /* Bouton secondary */
     QPushButton[variant="secondary"] {{
         background: {SURFACE};
-        color: {PRIMARY_HOVER};
-        border: 1px solid {PRIMARY};
+        color: {ACCENT};
+        border: 1px solid {ACCENT};
     }}
     
     QPushButton[variant="secondary"]:hover {{
-        background: {SELECTION_BG};
+        background: {HOVER_ROW};
     }}
     
     QPushButton[variant="secondary"]:pressed {{
-        background: {PRIMARY};
+        background: {ACCENT};
         color: white;
     }}
     
+    /* Bouton danger */
     QPushButton[variant="danger"] {{
         background: {DANGER};
         color: white;
@@ -324,54 +408,69 @@ def build_stylesheet() -> str:
     }}
     
     QPushButton[variant="danger"]:hover {{
-        background: {DANGER_HOVER};
+        background: #B91C1C;
     }}
     
     QPushButton[variant="danger"]:pressed {{
         background: {DANGER};
     }}
     
+    /* Bouton ghost */
+    QPushButton[variant="ghost"] {{
+        background: transparent;
+        color: {TEXT};
+        border: none;
+    }}
+    
+    QPushButton[variant="ghost"]:hover {{
+        background: {HOVER_ROW};
+    }}
+    
     QPushButton:disabled {{
-        background: #E5E7EB;
-        color: {TEXT_DISABLED};
-        border: 1px solid #D1D5DB;
+        background: {BG_APP};
+        color: {TEXT_SUBTLE};
+        border: 1px solid {BORDER};
     }}
     
     /* ===== Tableaux ===== */
     QTableView, QTableWidget {{
         background: {SURFACE};
-        alternate-background-color: {ROW_ALT};
+        alternate-background-color: {HOVER_ROW};
         color: {TEXT};
-        gridline-color: #E5E7EB;
-        border: 1px solid {BORDER};
-        selection-background-color: {SELECTION_BG};
+        gridline-color: {BORDER};
+        border: none;
+        border-radius: {RADIUS_CARD}px;
+        selection-background-color: {HOVER_ROW};
         selection-color: {TEXT};
     }}
     
     QHeaderView::section {{
-        background: {HEADER_BG};
-        color: {TEXT};
-        font-weight: bold;
-        padding: 8px;
+        background: {BG_APP};
+        color: {TEXT_SUBTLE};
+        font-weight: 700;
+        font-size: 9pt;
+        text-transform: uppercase;
+        padding: 12px 16px;
         border: none;
         border-bottom: 1px solid {BORDER};
-        border-right: 1px solid {BORDER};
+        border-right: none;
     }}
     
     QHeaderView::section:first {{
         border-left: none;
     }}
     
-    /* ===== Barre de défilement ===== */
+    /* ===== Barre de défilement (fines, 8px) ===== */
     QScrollBar:vertical {{
         background: {BG_APP};
-        width: 10px;
-        border-radius: 5px;
+        width: 8px;
+        border-radius: 4px;
+        margin: 0px;
     }}
     
     QScrollBar::handle:vertical {{
         background: {BORDER};
-        border-radius: 5px;
+        border-radius: 4px;
         min-height: 20px;
     }}
     
@@ -385,13 +484,14 @@ def build_stylesheet() -> str:
     
     QScrollBar:horizontal {{
         background: {BG_APP};
-        height: 10px;
-        border-radius: 5px;
+        height: 8px;
+        border-radius: 4px;
+        margin: 0px;
     }}
     
     QScrollBar::handle:horizontal {{
         background: {BORDER};
-        border-radius: 5px;
+        border-radius: 4px;
         min-width: 20px;
     }}
     
@@ -405,11 +505,12 @@ def build_stylesheet() -> str:
     
     /* ===== Tooltips ===== */
     QToolTip {{
-        background: {SURFACE};
-        color: {TEXT};
-        border: 1px solid {BORDER};
-        border-radius: 4px;
-        padding: 4px;
+        background: {TEXT};
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 9pt;
     }}
     
     /* ===== Group boxes ===== */
@@ -417,45 +518,47 @@ def build_stylesheet() -> str:
         background: {SURFACE};
         color: {TEXT};
         border: 1px solid {BORDER};
-        border-radius: 6px;
-        margin-top: 10px;
-        padding-top: 10px;
-        font-weight: bold;
+        border-radius: {RADIUS_CARD}px;
+        margin-top: 12px;
+        padding-top: 16px;
+        font-weight: 600;
     }}
     
     QGroupBox::title {{
         subcontrol-origin: margin;
-        left: 10px;
-        padding: 0 5px;
+        left: 16px;
+        padding: 0 8px;
     }}
     
     /* ===== Barre latérale ===== */
     QWidget#sidebar {{
-        background: {SIDEBAR};
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {SIDEBAR_TOP}, stop:1 {SIDEBAR_BOTTOM});
     }}
     
     QWidget#sidebar QPushButton {{
         background: transparent;
-        color: white;
+        color: {SIDEBAR_TEXT};
         border: none;
         text-align: left;
-        padding: 10px 15px;
-        border-radius: 6px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-weight: 500;
     }}
     
     QWidget#sidebar QPushButton:hover {{
-        background: {SIDEBAR_HOVER};
+        background: rgba(255, 255, 255, 0.1);
     }}
     
     QWidget#sidebar QPushButton[active="true"] {{
-        background: {PRIMARY};
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT}, stop:1 {ACCENT_2});
+        color: white;
     }}
     
     QWidget#sidebar QLabel#sidebar_title {{
         color: white;
-        font-size: 16pt;
-        font-weight: bold;
-        padding: 15px;
+        font-size: 18pt;
+        font-weight: 700;
+        padding: 20px 16px 10px;
     }}
     
     /* ===== Barre d'état ===== */
@@ -469,72 +572,84 @@ def build_stylesheet() -> str:
         border: none;
     }}
     
-    QStatusBar QLabel[status="success"] {{
-        color: #166534;
-        background: #DCFCE7;
-        padding: 2px 8px;
-        border-radius: 4px;
-    }}
-    
-    QStatusBar QLabel[status="error"] {{
-        color: #991B1B;
-        background: #FEE2E2;
-        padding: 2px 8px;
-        border-radius: 4px;
-    }}
-    
     /* ===== Cartes KPI ===== */
     QFrame[card_type="kpi"] {{
         background: {SURFACE};
-        border: 1px solid {BORDER};
-        border-radius: 10px;
-        padding: 15px;
+        border: none;
+        border-radius: {RADIUS_CARD}px;
+        padding: 20px;
     }}
     
     QLabel[label_type="kpi_title"] {{
         color: {TEXT_MUTED};
-        font-size: 12pt;
+        font-size: 11pt;
+        font-weight: 500;
     }}
     
     QLabel[label_type="kpi_value"] {{
         color: {TEXT};
-        font-size: 22pt;
-        font-weight: bold;
+        font-size: 26pt;
+        font-weight: 700;
     }}
     
-    /* ===== Barre latérale ===== */
-    QWidget#sidebar {{
-        background: {SIDEBAR};
-    }}
-    
-    QWidget#sidebar QPushButton {{
-        background: transparent;
-        color: white;
-        border: none;
-        text-align: left;
-        padding: 10px 15px;
-        border-radius: 6px;
-    }}
-    
-    QWidget#sidebar QPushButton:hover {{
-        background: {SIDEBAR_HOVER};
-    }}
-    
-    QWidget#sidebar QPushButton[active="true"] {{
-        background: {PRIMARY};
+    QLabel[label_type="kpi_context"] {{
+        color: {TEXT_SUBTLE};
+        font-size: 10pt;
     }}
     
     /* ===== Labels de statut ===== */
     QLabel[statut_bg] {{
-        padding: 10px;
-        border-radius: 5px;
-        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 9pt;
     }}
     
     /* ===== Labels avec setProperty dynamique ===== */
     QLabel[hasDynamicStyle="true"] {{
-        padding: 10px;
-        border-radius: 5px;
-        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 9pt;
+    }}
+    
+    /* ===== QMessageBox ===== */
+    QMessageBox {{
+        background: {SURFACE};
+    }}
+    
+    QMessageBox QPushButton {{
+        min-height: 36px;
+        padding: 8px 20px;
+        border-radius: {RADIUS_FIELD}px;
+        font-weight: 600;
+    }}
+    
+    /* ===== Labels avec setProperty dynamique ===== */
+    QLabel[hasDynamicStyle="true"] {{
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 9pt;
+    }}
+    
+    QLabel[hasDynamicStyle="true"][statut_bg="#DCFCE7"] {{
+        background: #DCFCE7;
+        color: #166534;
+    }}
+    
+    QLabel[hasDynamicStyle="true"][statut_bg="#FEF3C7"] {{
+        background: #FEF3C7;
+        color: #92400E;
+    }}
+    
+    QLabel[hasDynamicStyle="true"][statut_bg="#FEE2E2"] {{
+        background: #FEE2E2;
+        color: #991B1B;
+    }}
+    
+    QLabel[hasDynamicStyle="true"][statut_bg="#FFFFFF"] {{
+        background: #FFFFFF;
+        color: {TEXT};
     }}
     """

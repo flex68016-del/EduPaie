@@ -30,6 +30,7 @@ from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 from edupaie.ui.error_handler import handle_slot_errors
+from edupaie.ui.theme import TEXT, TEXT_MUTED, SURFACE, BORDER, ACCENT, ACCENT_2, refresh_style
 
 
 class StudentForm(QDialog):
@@ -87,70 +88,69 @@ class StudentForm(QDialog):
     
     def _create_ui(self) -> None:
         """
-        Crée l'interface utilisateur du formulaire.
+        Crée l'interface utilisateur premium du formulaire.
         
         Crée les champs de saisie pour : nom, prénom, classe, année scolaire, total dû.
-        Crée les boutons : Valider, Annuler.
+        Labels petits et gras au-dessus des champs, espacement 16 px.
         """
         # Layout principal
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         # ===== Champ : Nom =====
-        # Pourquoi QLabel + QLineEdit : Label pour l'intitulé, LineEdit pour la saisie
-        nom_layout = QHBoxLayout()
-        nom_label = QLabel("Nom :")
-        nom_label.setFixedWidth(100)
+        nom_label = QLabel("Nom")
+        nom_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(nom_label)
+        
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom de famille")
-        nom_layout.addWidget(nom_label)
-        nom_layout.addWidget(self.nom_input)
-        layout.addLayout(nom_layout)
+        self.nom_input.setMinimumHeight(40)
+        layout.addWidget(self.nom_input)
         
         # ===== Champ : Prénom =====
-        prenom_layout = QHBoxLayout()
-        prenom_label = QLabel("Prénom :")
-        prenom_label.setFixedWidth(100)
+        prenom_label = QLabel("Prénom")
+        prenom_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(prenom_label)
+        
         self.prenom_input = QLineEdit()
         self.prenom_input.setPlaceholderText("Prénom")
-        prenom_layout.addWidget(prenom_label)
-        prenom_layout.addWidget(self.prenom_input)
-        layout.addLayout(prenom_layout)
+        self.prenom_input.setMinimumHeight(40)
+        layout.addWidget(self.prenom_input)
         
         # ===== Champ : Classe =====
-        # Pourquoi QComboBox : Liste déroulante pour sélectionner une classe existante
-        classe_layout = QHBoxLayout()
-        classe_label = QLabel("Classe :")
-        classe_label.setFixedWidth(100)
+        classe_label = QLabel("Classe")
+        classe_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(classe_label)
+        
         self.classe_combo = QComboBox()
+        self.classe_combo.setMinimumHeight(40)
         self._load_classes()
-        classe_layout.addWidget(classe_label)
-        classe_layout.addWidget(self.classe_combo)
-        layout.addLayout(classe_layout)
+        layout.addWidget(self.classe_combo)
         
         # ===== Champ : Année scolaire =====
-        annee_layout = QHBoxLayout()
-        annee_label = QLabel("Année scolaire :")
-        annee_label.setFixedWidth(100)
+        annee_label = QLabel("Année scolaire")
+        annee_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(annee_label)
+        
         self.annee_input = QLineEdit()
         self.annee_input.setPlaceholderText("2024-2025")
-        self.annee_input.setInputMask("9999-9999")  # Masque de saisie
-        annee_layout.addWidget(annee_label)
-        annee_layout.addWidget(self.annee_input)
-        layout.addLayout(annee_layout)
+        self.annee_input.setInputMask("9999-9999")
+        self.annee_input.setMinimumHeight(40)
+        layout.addWidget(self.annee_input)
         
         # ===== Champ : Total dû =====
-        # Pourquoi QSpinBox : Saisie d'entier avec boutons +/- et valeur minimum 0
-        total_layout = QHBoxLayout()
-        total_label = QLabel("Total dû (FCFA) :")
-        total_label.setFixedWidth(100)
+        total_label = QLabel("Total dû (FCFA)")
+        total_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(total_label)
+        
         self.total_input = QSpinBox()
         self.total_input.setMinimum(0)
-        self.total_input.setMaximum(1000000)  # Maximum 1 000 000 FCFA
-        self.total_input.setSingleStep(1000)  # Pas de 1000 FCFA
-        self.total_input.setValue(50000)  # Valeur par défaut
-        total_layout.addWidget(total_label)
-        total_layout.addWidget(self.total_input)
-        layout.addLayout(total_layout)
+        self.total_input.setMaximum(1000000)
+        self.total_input.setSingleStep(1000)
+        self.total_input.setValue(50000)
+        self.total_input.setMinimumHeight(40)
+        layout.addWidget(self.total_input)
         
         # Espaceur
         layout.addStretch()
@@ -162,15 +162,69 @@ class StudentForm(QDialog):
         self.btn_validate = QPushButton(
             "Modifier" if self.is_edit_mode else "Créer"
         )
-        self.btn_validate.setProperty("variant", "primary")
+        self.btn_validate.setProperty("button_type", "primary")
         self.btn_validate.clicked.connect(self._on_validate)
         buttons_layout.addWidget(self.btn_validate)
         
         self.btn_cancel = QPushButton("Annuler")
-        self.btn_cancel.setProperty("variant", "secondary")
+        self.btn_cancel.setProperty("button_type", "secondary")
         self.btn_cancel.clicked.connect(self.reject)
         buttons_layout.addWidget(self.btn_cancel)
         layout.addLayout(buttons_layout)
+        
+        # Appliquer le style premium
+        self._apply_premium_style()
+    
+    def _apply_premium_style(self) -> None:
+        """
+        Applique le style premium aux widgets.
+        """
+        # Style des champs de saisie
+        input_style = f"""
+            QLineEdit, QSpinBox {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: {TEXT};
+            }}
+            QLineEdit:focus, QSpinBox:focus {{
+                border: 1.5px solid {ACCENT};
+            }}
+            QSpinBox::up-button, QSpinBox::down-button {{
+                width: 20px;
+                border: none;
+                background: transparent;
+            }}
+        """
+        self.nom_input.setStyleSheet(input_style)
+        self.prenom_input.setStyleSheet(input_style)
+        self.annee_input.setStyleSheet(input_style)
+        self.total_input.setStyleSheet(input_style)
+        
+        # Style du combo box
+        combo_style = f"""
+            QComboBox {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: {TEXT};
+            }}
+            QComboBox:hover {{
+                border: 1px solid {ACCENT};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+        """
+        self.classe_combo.setStyleSheet(combo_style)
+        
+        # Style des boutons
+        refresh_style(self.btn_validate)
+        refresh_style(self.btn_cancel)
     
     def _load_classes(self) -> None:
         """

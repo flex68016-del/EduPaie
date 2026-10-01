@@ -25,17 +25,23 @@ sys.path.insert(0, str(project_root))
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QPushButton, QTableWidget, QTableWidgetItem,
-    QHeaderView, QMessageBox, QDialog
+    QHeaderView, QMessageBox, QDialog, QMenu, QFrame
 )
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import Qt, Signal, QPoint
+from PySide6.QtGui import QColor, QFont, QPainter, QBrush, QPen
 from edupaie.services.student_service import StudentService
 from edupaie.data.database import Database
 from edupaie.services.exceptions import ValidationError, NotFoundError, BusinessRuleError
 from edupaie.ui.student_form import StudentForm
 from edupaie.ui.student_detail import StudentDetail
+from edupaie.ui.class_dialog import ClassDialog
 from edupaie.ui.error_handler import handle_slot_errors
-from edupaie.ui.theme import STATUS, format_fcfa, TEXT
+from edupaie.ui.theme import (
+    STATUS, format_fcfa, TEXT, TEXT_MUTED, TEXT_SUBTLE,
+    SURFACE, BG_APP, BORDER, HOVER_ROW, ACCENT, ACCENT_2,
+    add_shadow, refresh_style
+)
+from edupaie.ui.icons import icon
 
 
 class StudentsView(QWidget):
@@ -85,113 +91,290 @@ class StudentsView(QWidget):
     
     def _create_ui(self) -> None:
         """
-        Crée l'interface utilisateur de la vue.
+        Crée l'interface utilisateur premium de la vue.
         
         Crée :
-        - Barre de recherche et filtre par classe
-        - Tableau des élèves
-        - Boutons d'action (Ajouter, Modifier, Supprimer)
+        - En-tête avec titre, sous-titre et bouton d'ajout
+        - Barre d'outils avec recherche, filtre classe, filtre statut, boutons modifier/supprimer
+        - Tableau des élèves dans une carte arrondie
+        - Menu contextuel (clic droit)
         """
         # Layout principal
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
-        # ===== Section : Recherche et filtre =====
-        filter_layout = QHBoxLayout()
-        filter_layout.setContentsMargins(20, 10, 20, 10)
-        filter_layout.setSpacing(12)
+        # ===== Section : En-tête =====
+        header_layout = QHBoxLayout()
         
-        # Champ de recherche
-        search_label = QLabel("Rechercher :")
-        search_label.setProperty("isFilter", True)
+        # Titre et sous-titre
+        title_layout = QVBoxLayout()
+        
+        title_label = QLabel("Élèves")
+        title_label.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {TEXT};")
+        title_layout.addWidget(title_label)
+        
+        # Sous-titre avec nombre d'élèves (sera mis à jour dynamiquement)
+        self.subtitle_label = QLabel("0 élèves")
+        self.subtitle_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        title_layout.addWidget(self.subtitle_label)
+        
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch()
+        
+        # Bouton "Ajouter un élève"
+        self.btn_add = QPushButton("+ Ajouter un élève")
+        self.btn_add.setIcon(icon("plus", "#FFFFFF", 16))
+        self.btn_add.setProperty("button_type", "primary")
+        self.btn_add.clicked.connect(self._on_add_clicked)
+        header_layout.addWidget(self.btn_add)
+        
+        layout.addLayout(header_layout)
+        
+        # ===== Section : Barre d'outils =====
+        toolbar_layout = QHBoxLayout()
+        toolbar_layout.setSpacing(12)
+        
+        # Champ de recherche large avec icône intégrée
+        search_container = QFrame()
+        search_container.setStyleSheet(f"""
+            QFrame {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+            }}
+        """)
+        search_layout = QHBoxLayout(search_container)
+        search_layout.setContentsMargins(12, 0, 12, 0)
+        search_layout.setSpacing(8)
+        
+        search_icon = QLabel()
+        search_icon.setPixmap(icon("search", TEXT_MUTED, 20).pixmap(20, 20))
+        search_layout.addWidget(search_icon)
+        
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Nom ou prénom...")
+        self.search_input.setPlaceholderText("Rechercher un élève...")
+        self.search_input.setFrame(False)
+        self.search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background: transparent;
+                border: none;
+                padding: 8px 0;
+                font-size: 13px;
+                color: {TEXT};
+            }}
+        """)
         self.search_input.textChanged.connect(self._on_search_changed)
-        filter_layout.addWidget(search_label)
-        filter_layout.addWidget(self.search_input)
+        search_layout.addWidget(self.search_input)
+        
+        toolbar_layout.addWidget(search_container, stretch=1)
         
         # Filtre par classe
-        classe_label = QLabel("Classe :")
-        classe_label.setProperty("isFilter", True)
         self.classe_filter = QComboBox()
+        self.classe_filter.setMinimumWidth(150)
+        self.classe_filter.setFixedHeight(40)
         self._load_classes_filter()
         self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
-        filter_layout.addWidget(classe_label)
-        filter_layout.addWidget(self.classe_filter)
+        toolbar_layout.addWidget(self.classe_filter)
         
-        # Filtre par statut
-        statut_label = QLabel("Statut :")
-        statut_label.setProperty("isFilter", True)
-        self.statut_filter = QComboBox()
-        self._load_statut_filter()
-        self.statut_filter.currentIndexChanged.connect(self._on_filter_changed)
-        filter_layout.addWidget(statut_label)
-        filter_layout.addWidget(self.statut_filter)
+        # Bouton "Nouvelle classe"
+        self.btn_add_class = QPushButton(icon("plus", TEXT_MUTED, 16), "")
+        self.btn_add_class.setFixedSize(40, 40)
+        self.btn_add_class.setProperty("button_type", "ghost")
+        self.btn_add_class.setToolTip("Nouvelle classe")
+        self.btn_add_class.clicked.connect(self._on_add_class_clicked)
+        toolbar_layout.addWidget(self.btn_add_class)
         
-        layout.addLayout(filter_layout)
+        # Filtre par statut (chips)
+        self.filter_tous = QPushButton("Tous")
+        self.filter_tous.setCheckable(True)
+        self.filter_tous.setChecked(True)
+        self.filter_tous.setProperty("filter_chip", True)
+        self.filter_tous.setProperty("active", True)
+        self.filter_tous.clicked.connect(lambda: self._on_filter_chip("Tous"))
+        toolbar_layout.addWidget(self.filter_tous)
         
-        # ===== Section : Tableau des élèves =====
+        self.filter_soldes = QPushButton("Soldés")
+        self.filter_soldes.setCheckable(True)
+        self.filter_soldes.setProperty("filter_chip", True)
+        self.filter_soldes.setProperty("active", False)
+        self.filter_soldes.clicked.connect(lambda: self._on_filter_chip("Soldé"))
+        toolbar_layout.addWidget(self.filter_soldes)
+        
+        self.filter_partiels = QPushButton("Partiels")
+        self.filter_partiels.setCheckable(True)
+        self.filter_partiels.setProperty("filter_chip", True)
+        self.filter_partiels.setProperty("active", False)
+        self.filter_partiels.clicked.connect(lambda: self._on_filter_chip("Partiellement payé"))
+        toolbar_layout.addWidget(self.filter_partiels)
+        
+        self.filter_non_payes = QPushButton("Non payés")
+        self.filter_non_payes.setCheckable(True)
+        self.filter_non_payes.setProperty("filter_chip", True)
+        self.filter_non_payes.setProperty("active", False)
+        self.filter_non_payes.clicked.connect(lambda: self._on_filter_chip("Non payé"))
+        toolbar_layout.addWidget(self.filter_non_payes)
+        
+        toolbar_layout.addStretch()
+        
+        # Boutons Modifier et Supprimer (icônes)
+        self.btn_edit = QPushButton(icon("edit", TEXT_MUTED, 20), "")
+        self.btn_edit.setFixedSize(40, 40)
+        self.btn_edit.setProperty("button_type", "ghost")
+        self.btn_edit.setEnabled(False)
+        self.btn_edit.setToolTip("Modifier")
+        self.btn_edit.clicked.connect(self._on_edit_clicked)
+        toolbar_layout.addWidget(self.btn_edit)
+        
+        self.btn_delete = QPushButton(icon("trash", TEXT_MUTED, 20), "")
+        self.btn_delete.setFixedSize(40, 40)
+        self.btn_delete.setProperty("button_type", "ghost")
+        self.btn_delete.setEnabled(False)
+        self.btn_delete.setToolTip("Supprimer")
+        self.btn_delete.clicked.connect(self._on_delete_clicked)
+        toolbar_layout.addWidget(self.btn_delete)
+        
+        layout.addLayout(toolbar_layout)
+        
+        # ===== Section : Tableau des élèves dans une carte arrondie =====
+        table_card = QFrame()
+        table_card.setStyleSheet(f"""
+            QFrame {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 16px;
+            }}
+        """)
+        add_shadow(table_card)
+        
+        table_layout = QVBoxLayout(table_card)
+        table_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels(["Nom", "Prénom", "Classe", "Total dû (FCFA)", "Payé (FCFA)", "Solde (FCFA)", "Statut"])
+        self.table.setColumnCount(6)
+        self.table.setHorizontalHeaderLabels(["Élève", "Classe", "Total dû", "Payé", "Solde", "Statut"])
         
-        # Configuration du tableau
-        # Pourquoi setSelectionBehavior : Sélectionne la ligne entière au lieu de la cellule
+        # Configuration du tableau premium
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        # Pourquoi setSelectionMode : Une seule ligne sélectionnable à la fois
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        # Pourquoi setAlternatingRowColors : Améliore la lisibilité avec des couleurs alternées
-        self.table.setAlternatingRowColors(True)
-        # Pourquoi setSortingEnabled : Permet le tri par colonne en cliquant sur l'en-tête
         self.table.setSortingEnabled(True)
-        
-        # Masquer les numéros de ligne
         self.table.verticalHeader().setVisible(False)
-        
-        # Définir la hauteur des lignes
-        self.table.verticalHeader().setDefaultSectionSize(36)
+        self.table.verticalHeader().setDefaultSectionSize(56)  # Ligne 56 px premium
         
         # Ajustement des colonnes
         header = self.table.horizontalHeader()
-        # Pourquoi setSectionResizeMode : Ajuste automatiquement la largeur des colonnes
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Nom : extensible
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Prénom : extensible
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Classe : auto
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Total : auto
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Payé : auto
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Solde : auto
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Statut : auto
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Élève
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Classe
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Total dû
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Payé
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Solde
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Statut
         
-        layout.addWidget(self.table)
+        table_layout.addWidget(self.table)
+        layout.addWidget(table_card)
         
-        # ===== Section : Boutons d'action =====
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-        
-        self.btn_add = QPushButton("Ajouter")
-        self.btn_add.setProperty("variant", "primary")
-        self.btn_add.clicked.connect(self._on_add_clicked)
-        buttons_layout.addWidget(self.btn_add)
-        
-        self.btn_edit = QPushButton("Modifier")
-        self.btn_edit.setProperty("variant", "secondary")
-        self.btn_edit.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        self.btn_edit.clicked.connect(self._on_edit_clicked)
-        buttons_layout.addWidget(self.btn_edit)
-        
-        self.btn_delete = QPushButton("Supprimer")
-        self.btn_delete.setProperty("variant", "danger")
-        self.btn_delete.setEnabled(False)  # Désactivé tant qu'aucune sélection
-        self.btn_delete.clicked.connect(self._on_delete_clicked)
-        buttons_layout.addWidget(self.btn_delete)
-        layout.addLayout(buttons_layout)
+        # Appliquer le style premium
+        self._apply_premium_style()
         
         # Connexion signal -> slot : sélection changée -> activation/désactivation boutons
-        # Pourquoi itemSelectionChanged : Réagit quand l'utilisateur sélectionne/désélectionne une ligne
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
         
         # Connexion signal -> slot : double-clic -> ouverture fiche détaillée
-        # Pourquoi itemDoubleClicked : Permet d'ouvrir la fiche détaillée par double-clic
         self.table.itemDoubleClicked.connect(self._on_double_clicked)
+        
+        # Menu contextuel (clic droit)
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._show_context_menu)
+    
+    def _apply_premium_style(self) -> None:
+        """
+        Applique le style premium aux widgets.
+        """
+        # Style des chips de filtre
+        chip_style = f"""
+            QPushButton {{
+                background: transparent;
+                border: 1px solid {BORDER};
+                border-radius: 999px;
+                color: {TEXT_MUTED};
+                padding: 8px 16px;
+                font-size: 12px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background: {BG_APP};
+            }}
+            QPushButton:checked {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {ACCENT}, stop:1 {ACCENT_2});
+                color: white;
+                border: none;
+            }}
+        """
+        
+        self.filter_tous.setStyleSheet(chip_style)
+        self.filter_soldes.setStyleSheet(chip_style)
+        self.filter_partiels.setStyleSheet(chip_style)
+        self.filter_non_payes.setStyleSheet(chip_style)
+        
+        refresh_style(self.filter_tous)
+        refresh_style(self.filter_soldes)
+        refresh_style(self.filter_partiels)
+        refresh_style(self.filter_non_payes)
+        
+        # Style du filtre classe
+        class_filter_style = f"""
+            QComboBox {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: {TEXT};
+            }}
+            QComboBox:hover {{
+                border: 1px solid {ACCENT};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+        """
+        self.classe_filter.setStyleSheet(class_filter_style)
+        
+        # Style des boutons d'action
+        refresh_style(self.btn_add)
+        refresh_style(self.btn_add_class)
+        refresh_style(self.btn_edit)
+        refresh_style(self.btn_delete)
+        
+        # Style du tableau
+        table_style = f"""
+            QTableWidget {{
+                background: {SURFACE};
+                border: none;
+                gridline-color: {BORDER};
+                selection-background-color: {HOVER_ROW};
+            }}
+            QTableWidget::item {{
+                padding: 8px;
+                border-bottom: 1px solid {BORDER};
+            }}
+            QTableWidget::item:selected {{
+                background: {HOVER_ROW};
+                color: {TEXT};
+            }}
+            QHeaderView::section {{
+                background: {SURFACE};
+                border: none;
+                border-bottom: 1px solid {BORDER};
+                padding: 12px 8px;
+                font-size: 9px;
+                font-weight: bold;
+                color: {TEXT_SUBTLE};
+                text-transform: uppercase;
+            }}
+        """
+        self.table.setStyleSheet(table_style)
     
     def _load_classes_filter(self) -> None:
         """
@@ -214,22 +397,110 @@ class StudentsView(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des classes : {str(e)}")
     
-    def _load_statut_filter(self) -> None:
+    def _get_active_filter(self) -> str:
         """
-        Charge les options du filtre par statut.
+        Retourne le filtre de statut actuellement actif.
         
-        Ajoute une option "Tous les statuts" en première position pour permettre
-        d'afficher tous les élèves sans filtre de statut.
+        Returns:
+            Le statut actif ("Tous", "Soldé", "Partiellement payé", "Non payé").
         """
-        self.statut_filter.clear()
+        if self.filter_tous.isChecked():
+            return "Tous"
+        elif self.filter_soldes.isChecked():
+            return "Soldé"
+        elif self.filter_partiels.isChecked():
+            return "Partiellement payé"
+        elif self.filter_non_payes.isChecked():
+            return "Non payé"
+        return "Tous"
+    
+    def _on_filter_chip(self, statut: str) -> None:
+        """
+        Gère le clic sur un chip de filtre de statut.
         
-        # Option "Tous les statuts"
-        self.statut_filter.addItem("Tous les statuts", None)
+        Args:
+            statut: Statut sélectionné ("Tous", "Soldé", "Partiellement payé", "Non payé").
+        """
+        # Mettre à jour l'état des chips
+        self.filter_tous.setProperty("active", statut == "Tous")
+        self.filter_soldes.setProperty("active", statut == "Soldé")
+        self.filter_partiels.setProperty("active", statut == "Partiellement payé")
+        self.filter_non_payes.setProperty("active", statut == "Non payé")
         
-        # Options de statut
-        self.statut_filter.addItem("Soldé", "Soldé")
-        self.statut_filter.addItem("Partiellement payé", "Partiellement payé")
-        self.statut_filter.addItem("Non payé", "Non payé")
+        self.filter_tous.setChecked(statut == "Tous")
+        self.filter_soldes.setChecked(statut == "Soldé")
+        self.filter_partiels.setChecked(statut == "Partiellement payé")
+        self.filter_non_payes.setChecked(statut == "Non payé")
+        
+        refresh_style(self.filter_tous)
+        refresh_style(self.filter_soldes)
+        refresh_style(self.filter_partiels)
+        refresh_style(self.filter_non_payes)
+        
+        # Rafraîchir le tableau
+        self._load_students()
+    
+    def _on_add_class_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton "Nouvelle classe".
+        
+        Ouvre le dialogue pour créer une nouvelle classe.
+        """
+        dialog = ClassDialog(self.student_service, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Rafraîchir le filtre de classe
+            self._load_classes_filter()
+    
+    def _show_context_menu(self, pos: QPoint) -> None:
+        """
+        Affiche le menu contextuel au clic droit.
+        
+        Args:
+            pos: Position du clic dans le tableau.
+        """
+        # Vérifier qu'une ligne est sélectionnée
+        if not self.table.selectedItems():
+            return
+        
+        # Créer le menu contextuel
+        menu = QMenu(self)
+        
+        action_detail = menu.addAction("Voir la fiche")
+        action_detail.setIcon(icon("eye", TEXT, 16))
+        
+        menu.addSeparator()
+        
+        action_payment = menu.addAction("Nouveau paiement")
+        action_payment.setIcon(icon("wallet", TEXT, 16))
+        
+        menu.addSeparator()
+        
+        action_edit = menu.addAction("Modifier")
+        action_edit.setIcon(icon("edit", TEXT, 16))
+        
+        action_delete = menu.addAction("Supprimer")
+        action_delete.setIcon(icon("trash", TEXT, 16))
+        
+        # Afficher le menu et récupérer l'action sélectionnée
+        action = menu.exec(self.table.mapToGlobal(pos))
+        
+        # Exécuter l'action correspondante
+        if action == action_detail:
+            self._on_double_clicked(self.table.currentItem())
+        elif action == action_payment:
+            self._on_payment_clicked()
+        elif action == action_edit:
+            self._on_edit_clicked()
+        elif action == action_delete:
+            self._on_delete_clicked()
+    
+    def _on_payment_clicked(self) -> None:
+        """
+        Gère le clic sur "Nouveau paiement" dans le menu contextuel.
+        
+        Ouvre la fiche détaillée de l'élève, qui contient le bouton de paiement.
+        """
+        self._on_double_clicked(self.table.currentItem())
     
     def _load_students(self) -> None:
         """
@@ -239,22 +510,30 @@ class StudentsView(QWidget):
         1. Récupère le texte de recherche, la classe et le statut sélectionnés
         2. Appelle le service pour rechercher les élèves avec solde et statut
         3. Remplit le tableau avec les résultats
+        4. Met à jour le sous-titre avec le nombre d'élèves
         """
         try:
             # Récupération des filtres
             search_text = self.search_input.text().strip()
             classe_id = self.classe_filter.currentData()
-            statut = self.statut_filter.currentData()
+            statut = self._get_active_filter()
             
             # Si classe_id est -1, None (pas de filtre)
             if classe_id == -1:
                 classe_id = None
+            
+            # Si statut est "Tous", None (pas de filtre)
+            if statut == "Tous":
+                statut = None
             
             # Recherche des élèves avec solde et statut
             students = self.student_service.search_students_with_solde(search_text, classe_id, statut)
             
             # Stockage pour utilisation ultérieure
             self.current_students = students
+            
+            # Mise à jour du sous-titre
+            self.subtitle_label.setText(f"{len(students)} élève{'s' if len(students) != 1 else ''}")
             
             # Remplissage du tableau
             self._populate_table(students)
@@ -282,35 +561,45 @@ class StudentsView(QWidget):
         for row, student in enumerate(students):
             self.table.insertRow(row)
             
-            # Nom
-            nom_item = QTableWidgetItem(student['nom'])
-            nom_item.setData(Qt.ItemDataRole.UserRole, student['id'])  # Stocke l'ID
-            self.table.setItem(row, 0, nom_item)
-            
-            # Prénom
-            prenom_item = QTableWidgetItem(student['prenom'])
-            self.table.setItem(row, 1, prenom_item)
+            # Élève (nom complet)
+            nom_complet = f"{student['prenom']} {student['nom']}"
+            eleve_item = QTableWidgetItem(nom_complet)
+            eleve_item.setData(Qt.ItemDataRole.UserRole, student['id'])  # Stocke l'ID
+            self.table.setItem(row, 0, eleve_item)
             
             # Classe
             classe_item = QTableWidgetItem(student['nom_classe'])
-            self.table.setItem(row, 2, classe_item)
+            self.table.setItem(row, 1, classe_item)
             
             # Total dû
             total_item = QTableWidgetItem(format_fcfa(student['total_du']))
             total_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.table.setItem(row, 3, total_item)
+            self.table.setItem(row, 2, total_item)
             
             # Payé
-            # Pourquoi student.get('total_paye', 0) : Le service fournit maintenant total_paye
             total_paye = student.get('total_paye', 0)
             paye_item = QTableWidgetItem(format_fcfa(total_paye))
             paye_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.table.setItem(row, 4, paye_item)
+            self.table.setItem(row, 3, paye_item)
             
-            # Solde
+            # Solde (en rouge si positif)
             solde_item = QTableWidgetItem(format_fcfa(student['solde']))
             solde_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.table.setItem(row, 5, solde_item)
+            if student['solde'] > 0:
+                solde_item.setForeground(QColor("#991B1B"))  # Rouge foncé pour le solde restant
+            self.table.setItem(row, 4, solde_item)
+            
+            # Statut avec couleur (fond ET texte pour contraste WCAG)
+            statut = student['statut']
+            statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
+            statut_item = QTableWidgetItem(statut)
+            statut_item.setBackground(QColor(statut_colors["bg"]))
+            statut_item.setForeground(QColor(statut_colors["fg"]))
+            statut_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+            font = statut_item.font()
+            font.setBold(True)
+            statut_item.setFont(font)
+            self.table.setItem(row, 5, statut_item)
             
             # Statut avec couleur (fond ET texte pour contraste WCAG)
             statut = student['statut']
