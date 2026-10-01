@@ -102,4 +102,26 @@ echo   - Copiez uniquement dist\Edupaie.exe
 echo   - Le dossier build peut etre supprime
 echo.
 
+REM Construction de l'installateur Inno Setup si disponible
+echo Verification de l'installateur Inno Setup...
+where iscc >nul 2>&1
+if %errorlevel% equ 0 (
+    echo.
+    echo Construction de l'installateur Inno Setup...
+    if exist "installer\edupaie.iss" (
+        iscc "installer\edupaie.iss"
+        if %errorlevel% equ 0 (
+            echo [OK] Installateur cree dans installer/
+        ) else (
+            echo [AVERTIS] Echec de la creation de l'installateur.
+        )
+    ) else (
+        echo [AVERTIS] Fichier installer\edupaie.iss non trouve.
+    )
+) else (
+    echo [INFO] Inno Setup non installe. L'installateur ne sera pas cree.
+    echo Pour installer Inno Setup : https://jrsoftware.org/isdl.php
+)
+
+echo.
 pause
