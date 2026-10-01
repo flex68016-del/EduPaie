@@ -12,7 +12,8 @@
 # - WebEngine, QML, 3D, Multimedia : non utilisés par EduPaie
 # - Charts, DataVisualization, Bluetooth : non utilisés
 # - Sql : EduPaie utilise sqlite3 standard (pas QtSql)
-# - Test, unittest, pytest : non nécessaires en production
+# - Test, pytest : non nécessaires en production
+# - unittest : gardé car fpdf2 en a besoin (fpdf/sign.py)
 # - tkinter, numpy, pandas, matplotlib : non utilisés
 # =============================================================================
 
@@ -126,7 +127,7 @@ a = Analysis(
         "pandas",
         "matplotlib",
         "scipy",
-        "unittest",
+        # "unittest",  # Gardé : fpdf2 en a besoin pour fpdf/sign.py
         "pytest",
         "pydoc",
         "doctest",
