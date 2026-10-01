@@ -92,7 +92,23 @@ Pour construire l'exécutable Windows :
 build.bat
 ```
 
-L'exécutable sera créé dans `dist/Edupaie.exe`.
+L'exécutable sera créé dans `dist/Edupaie.exe` (environ 237 Mo).
+
+### Création de l'installateur Windows
+
+Pour créer un installateur Windows standard (.exe d'installation), vous devez :
+
+1. **Installer Inno Setup** : https://jrsoftware.org/isdl.php
+2. **Relancer le build** :
+   ```bash
+   build.bat
+   ```
+
+Si Inno Setup est installé, le script créera automatiquement l'installateur dans `installer/output/`. L'installateur inclut :
+- Installation dans `Program Files\EduPaie`
+- Raccourcis (Menu Démarrer + Bureau)
+- Icône de l'application
+- Conservation des données utilisateur dans `%APPDATA%\EduPaie`
 
 ## Architecture
 

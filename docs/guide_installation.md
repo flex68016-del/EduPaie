@@ -112,7 +112,26 @@ pytest
 build.bat
 ```
 
-L'exécutable sera créé dans le dossier `dist/`.
+L'exécutable sera créé dans le dossier `dist/Edupaie.exe` (environ 237 Mo).
+
+### Créer l'installateur Windows
+
+Pour créer un installateur Windows standard (.exe d'installation) :
+
+1. **Installer Inno Setup** : https://jrsoftware.org/isdl.php
+2. **Relancer le build** :
+   ```bash
+   build.bat
+   ```
+
+Si Inno Setup est installé, le script créera automatiquement l'installateur dans `installer/output/`.
+
+L'installateur inclut :
+- Installation dans `Program Files\EduPaie`
+- Raccourcis (Menu Démarrer + Bureau)
+- Icône de l'application
+- Conservation des données utilisateur dans `%APPDATA%\EduPaie`
+- Distribution compressée (~30-40 Mo)
 
 ## Structure du projet
 
