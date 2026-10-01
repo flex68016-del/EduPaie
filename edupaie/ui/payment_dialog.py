@@ -33,6 +33,7 @@ from edupaie.services.student_service import StudentService
 from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.error_handler import handle_slot_errors
 from edupaie.ui.theme import format_fcfa
+from edupaie.ui.receipt_preview_dialog import ReceiptPreviewDialog
 
 
 class PaymentDialog(QDialog):
@@ -352,12 +353,14 @@ class PaymentDialog(QDialog):
         """
         Propose à l'utilisateur de générer le reçu après un paiement réussi.
         
-        Présente deux options :
-        - Enregistrer le PDF (QFileDialog)
-        - Imprimer directement (QPrintDialog)
+        Présente trois options :
+        - Aperçu (par défaut) : Ouvre le dialogue d'aperçu du reçu
+        - Enregistrer le PDF : Enregistre directement via QFileDialog
+        - Imprimer : Imprime directement via QPrintDialog
         
-        Pourquoi cette proposition : Permet à l'utilisateur d'obtenir immédiatement
-        une preuve de paiement sous forme PDF ou imprimée.
+        Pourquoi ces trois options : L'aperçu permet de vérifier le reçu avant
+        de l'enregistrer ou de l'imprimer. Les options directes sont disponibles
+        pour les utilisateurs qui connaissent déjà le format.
         
         Pourquoi QDialog avec boutons personnalisés : Plus clair qu'une QMessageBox
         standard avec oui/non, l'utilisateur choisit explicitement l'action souhaitée.
@@ -375,16 +378,25 @@ class PaymentDialog(QDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
         
+        # Bouton Aperçu (par défaut, primary)
+        btn_preview = QPushButton("Aperçu")
+        btn_preview.setProperty("variant", "primary")
+        btn_preview.clicked.connect(lambda: self._ouvrir_apercu(dialog))
+        buttons_layout.addWidget(btn_preview)
+        
+        # Bouton Enregistrer le PDF
         btn_save_pdf = QPushButton("Enregistrer le PDF")
-        btn_save_pdf.setProperty("variant", "primary")
+        btn_save_pdf.setProperty("variant", "secondary")
         btn_save_pdf.clicked.connect(lambda: self._enregistrer_pdf(dialog))
         buttons_layout.addWidget(btn_save_pdf)
         
+        # Bouton Imprimer
         btn_print = QPushButton("Imprimer")
         btn_print.setProperty("variant", "secondary")
         btn_print.clicked.connect(lambda: self._imprimer_recu(dialog))
         buttons_layout.addWidget(btn_print)
         
+        # Bouton Passer
         btn_skip = QPushButton("Passer")
         btn_skip.setProperty("variant", "secondary")
         btn_skip.clicked.connect(dialog.accept)
@@ -395,6 +407,28 @@ class PaymentDialog(QDialog):
         
         # Affichage du dialogue
         dialog.exec()
+    
+    @handle_slot_errors
+    def _ouvrir_apercu(self, parent_dialog: QDialog) -> None:
+        """
+        Ouvre le dialogue d'aperçu du reçu.
+        
+        Args:
+            parent_dialog: Dialogue parent à fermer après l'aperçu
+        
+        Pourquoi fermer le parent : L'aperçu est une fenêtre modale qui
+        remplace le dialogue de proposition. Une fois l'aperçu fermé,
+        l'utilisateur peut continuer.
+        """
+        parent_dialog.accept()
+        
+        # Ouvrir le dialogue d'aperçu
+        preview_dialog = ReceiptPreviewDialog(
+            self.dernier_paiement_id,
+            self.receipt_service,
+            self
+        )
+        preview_dialog.exec()
         
         # Fermeture du dialogue de paiement après choix
         self.accept()
