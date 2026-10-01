@@ -143,6 +143,49 @@ class PaymentRepository:
             
             return [dict(row) for row in cursor.fetchall()]
     
+    def derniers_paiements(self, limite: int = 6) -> list:
+        """
+        Récupère les derniers paiements avec les informations de l'élève.
+        
+        Effectue un JOIN entre les tables paiement et eleve pour récupérer
+        le nom, prénom et classe de l'élève associé à chaque paiement.
+        
+        Args:
+            limite: Nombre maximum de paiements à retourner (défaut: 6).
+        
+        Returns:
+            Liste de dictionnaires contenant les informations des paiements
+            avec les détails de l'élève. Chaque dictionnaire contient :
+            id, montant, date_paiement, mode, numero_recu, solde_apres,
+            eleve_nom, eleve_prenom, eleve_classe.
+            La liste est triée par date décroissante (plus récent en premier).
+        
+        Pourquoi cette méthode : Permet d'afficher les derniers paiements
+        sur le tableau de bord avec le nom de l'élève associé.
+        
+        Pourquoi JOIN : Nécessaire pour récupérer les informations de l'élève
+        (nom, prénom, classe) qui ne sont pas dans la table paiement.
+        
+        Pourquoi ORDER BY date_paiement DESC : Les paiements les plus récents
+        doivent apparaître en premier sur le tableau de bord.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : JOIN paiement + eleve, trié par date décroissante
+            # Pourquoi LIMIT : Limite le nombre de résultats pour l'affichage
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                """SELECT p.id, p.montant, p.date_paiement, p.mode, p.numero_recu, p.solde_apres,
+                          e.nom as eleve_nom, e.prenom as eleve_prenom, c.nom as eleve_classe
+                   FROM paiement p
+                   JOIN eleve e ON p.eleve_id = e.id
+                   JOIN classe c ON e.classe_id = c.id
+                   ORDER BY p.date_paiement DESC, p.id DESC
+                   LIMIT ?""",
+                (limite,)
+            )
+            
+            return [dict(row) for row in cursor.fetchall()]
+    
     # ===== Section : Opérations d'écriture =====
     
     def add(self, eleve_id: int, montant: int, date_paiement: str, 
