@@ -24,7 +24,7 @@ sys.path.insert(0, str(project_root))
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QDateEdit, QPushButton, QMessageBox, QFrame,
-    QFileDialog
+    QFileDialog, QButtonGroup, QRadioButton
 )
 from PySide6.QtCore import Qt, QDate, Signal
 from PySide6.QtGui import QIntValidator, QColor
@@ -32,7 +32,11 @@ from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
 from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.error_handler import handle_slot_errors
-from edupaie.ui.theme import format_fcfa
+from edupaie.ui.theme import (
+    format_fcfa, TEXT, TEXT_MUTED, SURFACE, BORDER,
+    ACCENT, ACCENT_2, DANGER, refresh_style
+)
+from edupaie.ui.icons import icon
 from edupaie.ui.receipt_preview_dialog import ReceiptPreviewDialog
 
 
@@ -92,100 +96,153 @@ class PaymentDialog(QDialog):
     
     def _create_ui(self) -> None:
         """
-        Crée l'interface utilisateur du dialogue.
+        Crée l'interface utilisateur premium du dialogue.
         
         Crée :
-        - Section informations de l'élève
-        - Section solde restant
-        - Formulaire de paiement (montant, date, mode)
-        - Boutons Valider / Annuler
+        - Header avec nom de l'élève
+        - Solde restant bien visible
+        - Champ Montant grand (20 pt)
+        - Bouton "Solder"
+        - Modes de paiement en boutons segmentés
+        - Date
+        - Validation inline
+        - Boutons Enregistrer / Annuler
         """
         # Layout principal
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
-        # ===== Section : Informations de l'élève =====
-        info_frame = QFrame()
-        info_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        info_layout = QVBoxLayout(info_frame)
-        
+        # ===== Header =====
         self.nom_label = QLabel()
-        nom_font = self.nom_label.font()
-        nom_font.setPointSize(12)
-        nom_font.setBold(True)
-        self.nom_label.setFont(nom_font)
-        info_layout.addWidget(self.nom_label)
+        self.nom_label.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(self.nom_label)
         
         self.classe_label = QLabel()
-        info_layout.addWidget(self.classe_label)
+        self.classe_label.setStyleSheet(f"font-size: 12px; color: {TEXT_MUTED};")
+        layout.addWidget(self.classe_label)
         
-        layout.addWidget(info_frame)
+        # ===== Solde restant =====
+        solde_frame = QFrame()
+        solde_frame.setStyleSheet(f"""
+            QFrame {{
+                background: {BG_APP};
+                border-radius: 12px;
+                padding: 16px;
+            }}
+        """)
+        solde_layout = QVBoxLayout(solde_frame)
         
-        # ===== Section : Solde restant =====
-        solde_layout = QHBoxLayout()
-        solde_label = QLabel("Solde restant :")
+        solde_title = QLabel("Solde restant")
+        solde_title.setStyleSheet(f"font-size: 11px; font-weight: 600; color: {TEXT_MUTED};")
+        solde_layout.addWidget(solde_title)
+        
         self.solde_value_label = QLabel()
-        solde_font = self.solde_value_label.font()
-        solde_font.setPointSize(14)
-        solde_font.setBold(True)
-        self.solde_value_label.setFont(solde_font)
-        solde_layout.addWidget(solde_label)
+        self.solde_value_label.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {DANGER};")
         solde_layout.addWidget(self.solde_value_label)
-        solde_layout.addStretch()
-        layout.addLayout(solde_layout)
         
-        # Séparateur
-        separator = QLabel("─" * 50)
-        separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(separator)
+        layout.addWidget(solde_frame)
         
-        # ===== Section : Formulaire de paiement =====
-        form_layout = QVBoxLayout()
+        # ===== Champ Montant =====
+        montant_label = QLabel("Montant du paiement")
+        montant_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(montant_label)
         
-        # Montant
         montant_layout = QHBoxLayout()
-        montant_label = QLabel("Montant (FCFA) :")
-        montant_label.setMinimumWidth(120)
         self.montant_input = QLineEdit()
         self.montant_input.setPlaceholderText("Ex: 10000")
         self.montant_input.setValidator(QIntValidator(1, 999999999))
-        montant_layout.addWidget(montant_label)
+        self.montant_input.setStyleSheet(f"""
+            QLineEdit {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 12px 16px;
+                font-size: 20px;
+                font-weight: bold;
+                color: {TEXT};
+            }}
+            QLineEdit:focus {{
+                border: 1.5px solid {ACCENT};
+            }}
+        """)
         montant_layout.addWidget(self.montant_input)
-        form_layout.addLayout(montant_layout)
         
-        # Date
-        date_layout = QHBoxLayout()
-        date_label = QLabel("Date :")
-        date_label.setMinimumWidth(120)
+        self.btn_solder = QPushButton("Solder")
+        self.btn_solder.setProperty("button_type", "secondary")
+        self.btn_solder.clicked.connect(self._on_solder_clicked)
+        montant_layout.addWidget(self.btn_solder)
+        
+        layout.addLayout(montant_layout)
+        
+        # ===== Modes de paiement (boutons segmentés) =====
+        mode_label = QLabel("Mode de paiement")
+        mode_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(mode_label)
+        
+        mode_layout = QHBoxLayout()
+        mode_layout.setSpacing(8)
+        
+        self.mode_group = QButtonGroup(self)
+        
+        self.mode_especes = QRadioButton("Espèces")
+        self.mode_especes.setChecked(True)
+        self.mode_group.addButton(self.mode_especes, 0)
+        mode_layout.addWidget(self.mode_especes)
+        
+        self.mode_cheque = QRadioButton("Chèque")
+        self.mode_group.addButton(self.mode_cheque, 1)
+        mode_layout.addWidget(self.mode_cheque)
+        
+        self.mode_virement = QRadioButton("Virement")
+        self.mode_group.addButton(self.mode_virement, 2)
+        mode_layout.addWidget(self.mode_virement)
+        
+        self.mode_mobile = QRadioButton("Mobile money")
+        self.mode_group.addButton(self.mode_mobile, 3)
+        mode_layout.addWidget(self.mode_mobile)
+        
+        layout.addLayout(mode_layout)
+        
+        # ===== Date =====
+        date_label = QLabel("Date du paiement")
+        date_label.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {TEXT};")
+        layout.addWidget(date_label)
+        
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
         self.date_input.setDate(QDate.currentDate())
         self.date_input.setDisplayFormat("dd/MM/yyyy")
-        date_layout.addWidget(date_label)
-        date_layout.addWidget(self.date_input)
-        form_layout.addLayout(date_layout)
+        self.date_input.setMinimumHeight(40)
+        self.date_input.setStyleSheet(f"""
+            QDateEdit {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: {TEXT};
+            }}
+        """)
+        layout.addWidget(self.date_input)
         
-        # Mode de paiement
-        mode_layout = QHBoxLayout()
-        mode_label = QLabel("Mode :")
-        mode_label.setMinimumWidth(120)
-        self.mode_input = QComboBox()
-        self.mode_input.addItems(PaymentService.MODES_AUTORISES)
-        # Capitalisation de la première lettre pour l'affichage
-        for i in range(self.mode_input.count()):
-            mode = self.mode_input.itemText(i)
-            self.mode_input.setItemText(i, mode.capitalize())
-        mode_layout.addWidget(mode_label)
-        mode_layout.addWidget(self.mode_input)
-        form_layout.addLayout(mode_layout)
-        
-        # Avertissement (visible si montant > solde)
+        # ===== Validation inline =====
         self.warning_label = QLabel()
-        self.warning_label.setProperty("status", "error")
+        self.warning_label.setStyleSheet(f"""
+            QLabel {{
+                background: #FEE2E2;
+                color: #991B1B;
+                padding: 8px 12px;
+                border-radius: 8px;
+                font-size: 11px;
+            }}
+        """)
         self.warning_label.setWordWrap(True)
         self.warning_label.hide()
-        form_layout.addWidget(self.warning_label)
+        layout.addWidget(self.warning_label)
         
-        layout.addLayout(form_layout)
+        # Connexion signal -> slot : changement de montant -> vérification solde
+        self.montant_input.textChanged.connect(self._on_montant_changed)
         
         # Espaceur
         layout.addStretch()
@@ -194,20 +251,56 @@ class PaymentDialog(QDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
         
-        self.btn_cancel = QPushButton("Annuler")
-        self.btn_cancel.setProperty("variant", "secondary")
-        self.btn_cancel.clicked.connect(self.reject)
-        buttons_layout.addWidget(self.btn_cancel)
-        
-        self.btn_validate = QPushButton("Valider")
-        self.btn_validate.setProperty("variant", "primary")
+        self.btn_validate = QPushButton("Enregistrer le paiement")
+        self.btn_validate.setProperty("button_type", "primary")
         self.btn_validate.clicked.connect(self._on_validate_clicked)
         buttons_layout.addWidget(self.btn_validate)
         
+        self.btn_cancel = QPushButton("Annuler")
+        self.btn_cancel.setProperty("button_type", "secondary")
+        self.btn_cancel.clicked.connect(self.reject)
+        buttons_layout.addWidget(self.btn_cancel)
         layout.addLayout(buttons_layout)
         
-        # Connexion signal -> slot : changement de montant -> vérification solde
-        self.montant_input.textChanged.connect(self._on_montant_changed)
+        # Appliquer le style premium
+        self._apply_premium_style()
+    
+    def _apply_premium_style(self) -> None:
+        """
+        Applique le style premium aux widgets.
+        """
+        # Style des boutons radio
+        radio_style = f"""
+            QRadioButton {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: 12px;
+                color: {TEXT};
+            }}
+            QRadioButton:checked {{
+                background: {ACCENT};
+                color: white;
+                border: none;
+            }}
+        """
+        self.mode_especes.setStyleSheet(radio_style)
+        self.mode_cheque.setStyleSheet(radio_style)
+        self.mode_virement.setStyleSheet(radio_style)
+        self.mode_mobile.setStyleSheet(radio_style)
+        
+        # Style des boutons
+        refresh_style(self.btn_solder)
+        refresh_style(self.btn_validate)
+        refresh_style(self.btn_cancel)
+    
+    def _on_solder_clicked(self) -> None:
+        """
+        Remplit le champ montant avec le solde restant.
+        """
+        if hasattr(self, 'solde_restant'):
+            self.montant_input.setText(str(self.solde_restant))
     
     def _load_student_data(self) -> None:
         """
@@ -226,12 +319,16 @@ class PaymentDialog(QDialog):
                 return
             
             # Affichage des informations de l'élève
-            self.nom_label.setText(f"{student['nom']} {student['prenom']}")
-            self.classe_label.setText(f"Classe : {student['nom_classe']} | Année : {student['annee_scolaire']}")
+            self.nom_label.setText(f"{student['prenom']} {student['nom']}")
+            self.classe_label.setText(student['nom_classe'])
             
             # Affichage du solde restant
             solde = student['solde']
+            self.solde_restant = solde  # Stocker pour le bouton "Solder"
             self.solde_value_label.setText(format_fcfa(solde))
+            
+            # Mettre à jour le texte du bouton "Solder"
+            self.btn_solder.setText(f"Solder ({format_fcfa(solde)})")
             
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du chargement des données : {str(e)}")
@@ -242,13 +339,7 @@ class PaymentDialog(QDialog):
         """
         Gère le changement de montant.
         
-        Args:
-            texte: Le texte saisi dans le champ montant (émis par textChanged)
-        
         Affiche un avertissement si le montant dépasse le solde restant.
-        
-        Pourquoi textChanged.connect : Permet de donner un feedback immédiat
-        à l'utilisateur pendant la saisie.
         """
         montant_text = self.montant_input.text()
         
@@ -258,7 +349,7 @@ class PaymentDialog(QDialog):
         
         try:
             montant = int(montant_text)
-            solde = int(self.solde_value_label.text().replace(" FCFA", "").replace(",", ""))
+            solde = self.solde_restant if hasattr(self, 'solde_restant') else 0
             
             if montant > solde:
                 self.warning_label.setText(
@@ -274,31 +365,30 @@ class PaymentDialog(QDialog):
     @handle_slot_errors
     def _on_validate_clicked(self) -> None:
         """
-        Gère le clic sur le bouton Valider.
+        Gère le clic sur le bouton Enregistrer.
         
         Valide les données UI pour le confort utilisateur, puis appelle
         le service pour l'enregistrement avec validation métier réelle.
-        
-        Pourquoi deux niveaux de validation :
-        - Validation UI : Confort utilisateur (feedback immédiat)
-        - Validation service : Règle métier réelle (authentique)
         """
         # ===== Validation UI (confort utilisateur) =====
         montant_text = self.montant_input.text()
         if not montant_text:
-            QMessageBox.warning(self, "Erreur", "Veuillez saisir un montant.")
+            self.warning_label.setText("Veuillez saisir un montant.")
+            self.warning_label.show()
             self.montant_input.setFocus()
             return
         
         try:
             montant = int(montant_text)
         except ValueError:
-            QMessageBox.warning(self, "Erreur", "Le montant doit être un entier.")
+            self.warning_label.setText("Le montant doit être un entier.")
+            self.warning_label.show()
             self.montant_input.setFocus()
             return
         
         if montant <= 0:
-            QMessageBox.warning(self, "Erreur", "Le montant doit être strictement positif.")
+            self.warning_label.setText("Le montant doit être strictement positif.")
+            self.warning_label.show()
             self.montant_input.setFocus()
             return
         
@@ -307,8 +397,9 @@ class PaymentDialog(QDialog):
         date_paiement = date_qdate.toString("yyyy-MM-dd")
         
         # Récupération du mode (en minuscules pour le service)
-        mode_index = self.mode_input.currentIndex()
-        mode = PaymentService.MODES_AUTORISES[mode_index]
+        mode_index = self.mode_group.checkedId()
+        modes = ["especes", "cheque", "virement", "mobile_money"]
+        mode = modes[mode_index]
         
         # ===== Appel du service (validation métier réelle) =====
         try:
@@ -333,14 +424,14 @@ class PaymentDialog(QDialog):
             self.dernier_paiement_id = paiement['id']
             
             # Émission du signal pour notifier le rafraîchissement
-            # Pourquoi Signal : Permet au tableau de bord de se rafraîchir après paiement
             self.payment_made.emit()
             
             # Proposition de générer le reçu
             self._proposer_recu()
             
         except ValidationError as e:
-            QMessageBox.warning(self, "Erreur de validation", e.message)
+            self.warning_label.setText(e.message)
+            self.warning_label.show()
             
         except NotFoundError as e:
             QMessageBox.warning(self, "Non trouvé", e.message)
