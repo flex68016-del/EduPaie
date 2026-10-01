@@ -56,10 +56,6 @@ class ReceiptService:
         self.payment_repository = payment_repository
         self.student_repository = student_repository
     
-    # Alias pour compatibilité avec le code existant qui utilise generate_receipt
-    # Pourquoi : Certains fichiers utilisent le nom anglais generate_receipt
-    generate_receipt = generer_recu
-    
     def generer_recu(self, paiement_id: int, chemin_sortie: Optional[str] = None) -> str:
         """
         Génère un reçu PDF pour un paiement.
@@ -205,3 +201,7 @@ class ReceiptService:
         pdf.output(chemin_sortie)
         
         return chemin_sortie
+    
+    # Alias pour compatibilité avec le code existant qui utilise generate_receipt
+    # Pourquoi : Certains fichiers utilisent le nom anglais generate_receipt
+    generate_receipt = generer_recu
