@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QColor
 from edupaie.services.payment_service import PaymentService
+from edupaie.ui.theme import refresh_style
 from edupaie.services.student_service import StudentService
 from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.payment_dialog import PaymentDialog
@@ -269,7 +270,10 @@ class StudentDetail(QDialog):
             statut = student['statut']
             statut_colors = STATUS.get(statut, {"bg": "#FFFFFF", "fg": TEXT})
             self.statut_label.setText(f"Statut : {statut}")
-            self.statut_label.setStyleSheet(f"color: {statut_colors['fg']}; background-color: {statut_colors['bg']}; padding: 10px; border-radius: 5px; font-weight: bold;")
+            self.statut_label.setProperty("statut_bg", statut_colors["bg"])
+            self.statut_label.setProperty("statut_fg", statut_colors["fg"])
+            self.statut_label.setProperty("hasDynamicStyle", "true")
+            refresh_style(self.statut_label)
             
             # Chargement des paiements
             self._load_paiements()
