@@ -31,6 +31,7 @@ from edupaie.services.payment_service import PaymentService
 from edupaie.services.student_service import StudentService
 from edupaie.services.receipt_service import ReceiptService
 from edupaie.ui.payment_dialog import PaymentDialog
+from edupaie.ui.receipt_preview_dialog import ReceiptPreviewDialog
 from edupaie.ui.error_handler import handle_slot_errors
 from edupaie.ui.theme import STATUS, format_fcfa, TEXT
 
@@ -188,8 +189,11 @@ class StudentDetail(QDialog):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Montant
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Solde après
         
-        # Connexion signal -> slot : sélection -> activation du bouton Consulter le reçu
+        # Connexion signal -> slot : sélection -> activation des boutons de reçu
         self.paiements_table.itemSelectionChanged.connect(self._on_selection_changed)
+        
+        # Connexion signal -> slot : double-clic -> ouvrir l'aperçu
+        self.paiements_table.cellDoubleClicked.connect(self._on_table_double_clicked)
         
         layout.addWidget(self.paiements_table)
         
@@ -200,11 +204,26 @@ class StudentDetail(QDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
         
-        self.btn_view_receipt = QPushButton("Consulter le reçu")
-        self.btn_view_receipt.setProperty("variant", "secondary")
-        self.btn_view_receipt.setEnabled(False)  # Désactivé par défaut
-        self.btn_view_receipt.clicked.connect(self._on_view_receipt_clicked)
-        buttons_layout.addWidget(self.btn_view_receipt)
+        # Bouton Aperçu (actif quand une ligne est sélectionnée)
+        self.btn_preview_receipt = QPushButton("Aperçu")
+        self.btn_preview_receipt.setProperty("variant", "primary")
+        self.btn_preview_receipt.setEnabled(False)  # Désactivé par défaut
+        self.btn_preview_receipt.clicked.connect(self._on_preview_receipt_clicked)
+        buttons_layout.addWidget(self.btn_preview_receipt)
+        
+        # Bouton Enregistrer le PDF (secondaire)
+        self.btn_save_receipt = QPushButton("Enregistrer le PDF")
+        self.btn_save_receipt.setProperty("variant", "secondary")
+        self.btn_save_receipt.setEnabled(False)  # Désactivé par défaut
+        self.btn_save_receipt.clicked.connect(self._on_save_receipt_clicked)
+        buttons_layout.addWidget(self.btn_save_receipt)
+        
+        # Bouton Imprimer (secondaire)
+        self.btn_print_receipt = QPushButton("Imprimer")
+        self.btn_print_receipt.setProperty("variant", "secondary")
+        self.btn_print_receipt.setEnabled(False)  # Désactivé par défaut
+        self.btn_print_receipt.clicked.connect(self._on_print_receipt_clicked)
+        buttons_layout.addWidget(self.btn_print_receipt)
         
         self.btn_new_payment = QPushButton("Nouveau paiement")
         self.btn_new_payment.setProperty("variant", "primary")
@@ -325,168 +344,202 @@ class StudentDetail(QDialog):
         """
         Gère le changement de sélection dans le tableau des paiements.
         
-        Active le bouton "Consulter le reçu" si une ligne est sélectionnée,
-        le désactive sinon.
+        Active les boutons de reçu (Aperçu, Enregistrer, Imprimer) si une ligne
+        est sélectionnée, les désactive sinon.
         
         Pourquoi itemSelectionChanged.connect : Permet d'activer/désactiver
-        le bouton de consultation du reçu selon la sélection.
+        les boutons de reçu selon la sélection.
         """
         # Vérification si une ligne est sélectionnée
         selected_items = self.paiements_table.selectedItems()
         has_selection = len(selected_items) > 0
         
-        # Activation/désactivation du bouton
-        self.btn_view_receipt.setEnabled(has_selection)
+        # Activation/désactivation des boutons
+        self.btn_preview_receipt.setEnabled(has_selection)
+        self.btn_save_receipt.setEnabled(has_selection)
+        self.btn_print_receipt.setEnabled(has_selection)
     
     @handle_slot_errors
-    def _on_view_receipt_clicked(self) -> None:
+    def _on_table_double_clicked(self, row: int, column: int) -> None:
         """
-        Gère le clic sur le bouton Consulter le reçu.
+        Gère le double-clic sur une ligne du tableau des paiements.
         
-        Propose à l'utilisateur de générer ou ré-imprimer le reçu PDF
-        du paiement sélectionné depuis l'historique.
-        
-        Pourquoi ré-impression identique : Le reçu est reconstruit UNIQUEMENT
-        à partir de données figées en base (paiement.solde_apres, numero_recu, etc.),
-        garantissant que deux générations successives sont identiques.
-        
-        Pourquoi l'ID dans UserRole : Permet de récupérer l'ID du paiement sélectionné
-        depuis la ligne du tableau pour le relier à la base de données.
-        """
-        # Récupération de la ligne sélectionnée
-        selected_items = self.paiements_table.selectedItems()
-        if not selected_items:
-            return
-        
-        # Récupération de l'ID du paiement (stocké dans UserRole de la première colonne)
-        row = self.paiements_table.currentRow()
-        recu_item = self.paiements_table.item(row, 0)
-        paiement_id = recu_item.data(Qt.ItemDataRole.UserRole)
-        
-        # Création d'un dialogue personnalisé pour choisir l'action
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Reçu de paiement")
-        dialog.setMinimumWidth(400)
-        
-        layout = QVBoxLayout()
-        
-        label = QLabel("Que souhaitez-vous faire avec ce reçu ?")
-        layout.addWidget(label)
-        
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-        
-        btn_save_pdf = QPushButton("Enregistrer le PDF")
-        btn_save_pdf.setProperty("variant", "primary")
-        btn_save_pdf.clicked.connect(lambda: self._enregistrer_pdf(dialog, paiement_id))
-        buttons_layout.addWidget(btn_save_pdf)
-        
-        btn_print = QPushButton("Imprimer")
-        btn_print.setProperty("variant", "secondary")
-        btn_print.clicked.connect(lambda: self._imprimer_recu(dialog, paiement_id))
-        buttons_layout.addWidget(btn_print)
-        
-        btn_cancel = QPushButton("Annuler")
-        btn_cancel.setProperty("variant", "secondary")
-        btn_cancel.clicked.connect(dialog.reject)
-        buttons_layout.addWidget(btn_cancel)
-        
-        layout.addLayout(buttons_layout)
-        dialog.setLayout(layout)
-        
-        # Affichage du dialogue
-        dialog.exec()
-    
-    @handle_slot_errors
-    def _enregistrer_pdf(self, dialog: QDialog, paiement_id: int) -> None:
-        """
-        Enregistre le reçu PDF au choix de l'utilisateur.
+        Ouvre directement l'aperçu du reçu du paiement sélectionné.
         
         Args:
-            dialog: Dialogue à fermer après enregistrement.
-            paiement_id: Identifiant du paiement.
+            row: Index de la ligne cliquée
+            column: Index de la colonne cliquée
         
-        Pourquoi QFileDialog.getSaveFileName : Permet à l'utilisateur de choisir
-        le nom et l'emplacement du fichier PDF.
-        
-        Pourquoi dossier par défaut via utils/paths : Stocke les reçus dans un
-        dossier dédié pour l'organisation (user_data_dir/reçus).
+        Pourquoi double-clic : Raccourci utilisateur courant pour consulter
+        un élément de liste.
         """
-        from edupaie.utils.paths import user_data_dir
-        from datetime import datetime
-        
-        # Récupération du numéro de reçu pour le nom par défaut
-        paiement = self.payment_service.payment_repository.get_by_id(paiement_id)
-        if paiement is None:
-            QMessageBox.warning(self, "Non trouvé", "Le paiement n'existe pas.")
+        # Vérifier qu'il y a des paiements
+        if self.paiements_table.rowCount() == 0:
             return
         
-        # Dossier par défaut pour les reçus
-        receipts_dir = user_data_dir() / "reçus"
-        receipts_dir.mkdir(parents=True, exist_ok=True)
+        # Vérifier que ce n'est pas la ligne "Aucun paiement"
+        if self.paiements_table.item(row, 0).text() == "Aucun paiement enregistré":
+            return
         
-        # Ouverture du dialogue de sauvegarde
-        fichier_pdf, _ = QFileDialog.getSaveFileName(
-            self,
-            "Enregistrer le reçu",
-            str(receipts_dir / f"{paiement['numero_recu']}.pdf"),
-            "Fichiers PDF (*.pdf)"
+        # Ouvrir l'aperçu
+        self._on_preview_receipt_clicked()
+    
+    @handle_slot_errors
+    def _on_preview_receipt_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Aperçu.
+        
+        Ouvre le dialogue d'aperçu du reçu du paiement sélectionné.
+        
+        Pourquoi l'aperçu : Permet à l'utilisateur de vérifier le reçu avant
+        de l'enregistrer ou de l'imprimer.
+        """
+        paiement_id = self._get_selected_payment_id()
+        if paiement_id is None:
+            return
+        
+        # Ouvrir le dialogue d'aperçu
+        preview_dialog = ReceiptPreviewDialog(
+            paiement_id,
+            self.receipt_service,
+            self
         )
-        
-        if fichier_pdf:
-            try:
-                # Génération du PDF
-                chemin = self.receipt_service.generer_recu(paiement_id, fichier_pdf)
-                QMessageBox.information(
-                    self,
-                    "Succès",
-                    f"Reçu enregistré avec succès :\n{chemin}"
-                )
-                dialog.accept()
-            except Exception as e:
-                QMessageBox.critical(self, "Erreur", f"Erreur lors de la génération du PDF : {str(e)}")
+        preview_dialog.exec()
     
     @handle_slot_errors
-    def _imprimer_recu(self, dialog: QDialog, paiement_id: int) -> None:
+    def _on_save_receipt_clicked(self) -> None:
         """
-        Imprime directement le reçu.
+        Gère le clic sur le bouton Enregistrer le PDF.
         
-        Args:
-            dialog: Dialogue à fermer après impression.
-            paiement_id: Identifiant du paiement.
+        Génère et enregistre directement le PDF du paiement sélectionné
+        via QFileDialog.
         
-        Pourquoi approche simplifiée : PySide6 standard n'inclut pas QPdfDocument.
-        Pour l'instant, génère le PDF et informe l'utilisateur qu'il peut l'imprimer
-        via son lecteur PDF.
-        
-        Note : Une implémentation complète nécessiterait d'ajouter PySide6-Pdf
-        ou d'utiliser une bibliothèque externe pour l'impression directe.
+        Pourquoi enregistrement direct : Pour les utilisateurs qui connaissent
+        déjà le format et veulent éviter l'étape d'aperçu.
         """
+        paiement_id = self._get_selected_payment_id()
+        if paiement_id is None:
+            return
+        
+        # Générer le PDF dans un fichier temporaire
         from edupaie.utils.paths import user_data_dir
+        import shutil
+        from pathlib import Path
+        
+        tmp_dir = user_data_dir() / "tmp"
+        tmp_dir.mkdir(exist_ok=True)
+        temp_file = tmp_dir / f"temp_receipt_{paiement_id}.pdf"
         
         try:
-            # Génération du PDF dans le dossier reçus
-            receipts_dir = user_data_dir() / "reçus"
-            receipts_dir.mkdir(parents=True, exist_ok=True)
+            # Générer le PDF
+            receipt_number = self.receipt_service.generate_receipt(paiement_id, str(temp_file))
             
-            paiement = self.payment_service.payment_repository.get_by_id(paiement_id)
-            if paiement is None:
-                QMessageBox.warning(self, "Non trouvé", "Le paiement n'existe pas.")
-                return
+            # Nom de fichier proposé
+            default_name = f"Recu_{receipt_number}.pdf"
             
-            chemin_pdf = str(receipts_dir / f"{paiement['numero_recu']}.pdf")
-            self.receipt_service.generer_recu(paiement_id, chemin_pdf)
-            
-            QMessageBox.information(
+            # Boîte de dialogue pour choisir l'emplacement
+            file_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "PDF généré",
-                f"Le reçu a été généré :\n{chemin_pdf}\n\n"
-                "Vous pouvez l'imprimer depuis votre lecteur PDF."
+                "Enregistrer le reçu",
+                default_name,
+                "Fichiers PDF (*.pdf)"
             )
-            dialog.accept()
+            
+            if file_path:
+                shutil.copy2(temp_file, file_path)
+                QMessageBox.information(self, "Succès", "Le reçu a été enregistré avec succès")
             
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Erreur lors de la génération du PDF : {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Erreur",
+                f"Impossible d'enregistrer le reçu :\n{str(e)}"
+            )
+            import logging
+            logging.error(f"Erreur lors de l'enregistrement du reçu : {e}", exc_info=True)
+        finally:
+            # Supprimer le fichier temporaire
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception:
+                    pass
+    
+    @handle_slot_errors
+    def _on_print_receipt_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton Imprimer.
+        
+        Génère et imprime directement le reçu du paiement sélectionné
+        via QPrintDialog.
+        
+        Pourquoi impression directe : Pour les utilisateurs qui veulent
+        imprimer sans passer par l'aperçu.
+        """
+        paiement_id = self._get_selected_payment_id()
+        if paiement_id is None:
+            return
+        
+        # Générer le PDF dans un fichier temporaire
+        from edupaie.utils.paths import user_data_dir
+        from pathlib import Path
+        
+        tmp_dir = user_data_dir() / "tmp"
+        tmp_dir.mkdir(exist_ok=True)
+        temp_file = tmp_dir / f"temp_receipt_{paiement_id}.pdf"
+        
+        try:
+            # Générer le PDF
+            receipt_number = self.receipt_service.generate_receipt(paiement_id, str(temp_file))
+            
+            # Imprimer via le dialogue d'aperçu (le dialogue gère l'impression)
+            preview_dialog = ReceiptPreviewDialog(
+                paiement_id,
+                self.receipt_service,
+                self
+            )
+            # Simuler un clic sur le bouton Imprimer
+            preview_dialog._print_pdf()
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Erreur",
+                f"Impossible d'imprimer le reçu :\n{str(e)}"
+            )
+            import logging
+            logging.error(f"Erreur lors de l'impression du reçu : {e}", exc_info=True)
+        finally:
+            # Supprimer le fichier temporaire
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception:
+                    pass
+    
+    def _get_selected_payment_id(self) -> int | None:
+        """
+        Récupère l'ID du paiement sélectionné dans le tableau.
+        
+        Returns:
+            L'ID du paiement sélectionné, ou None si aucune sélection.
+        
+        Pourquoi cette méthode : Évite la duplication de code pour récupérer
+        l'ID du paiement sélectionné.
+        """
+        selected_items = self.paiements_table.selectedItems()
+        if not selected_items:
+            return None
+        
+        row = self.paiements_table.currentRow()
+        recu_item = self.paiements_table.item(row, 0)
+        
+        # Vérifier que ce n'est pas la ligne "Aucun paiement"
+        if recu_item.text() == "Aucun paiement enregistré":
+            return None
+        
+        paiement_id = recu_item.data(Qt.ItemDataRole.UserRole)
+        return paiement_id
     
     @handle_slot_errors
     def _on_new_payment_clicked(self) -> None:
