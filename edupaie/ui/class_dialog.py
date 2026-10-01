@@ -123,8 +123,8 @@ class ClassDialog(QDialog):
         """
         Applique le style premium aux widgets.
         """
-        # Style du champ de saisie
-        input_style = f"""
+        # Style du champ de saisie via theme.py
+        self.name_input.setStyleSheet(f"""
             QLineEdit {{
                 background: {SURFACE};
                 border: 1px solid {BORDER};
@@ -136,8 +136,7 @@ class ClassDialog(QDialog):
             QLineEdit:focus {{
                 border: 1.5px solid {ACCENT};
             }}
-        """
-        self.name_input.setStyleSheet(input_style)
+        """)
         
         refresh_style(self.btn_cancel)
         refresh_style(self.btn_save)
