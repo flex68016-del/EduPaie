@@ -34,7 +34,7 @@ from edupaie.services.student_service import StudentService
 from edupaie.ui.error_handler import handle_slot_errors
 from edupaie.ui.theme import (
     STATUS, format_fcfa, TEXT, TEXT_MUTED, TEXT_SUBTLE,
-    SURFACE, BG_APP, ACCENT, ACCENT_2, BORDER,
+    SURFACE, BG_APP, ACCENT, ACCENT_2, BORDER, DANGER,
     ICON_TINTS, add_shadow, refresh_style
 )
 from edupaie.ui.icons import icon
@@ -659,11 +659,8 @@ class Dashboard(QWidget):
         """
         Charge et affiche les 6 derniers paiements.
         
-        Pourquoi cette méthode : Affiche les paiements récents pour une vue
-        d'orientation rapide sur l'activité.
-        
-        Note : Pour l'instant, affiche un placeholder car le service
-        derniers_paiements sera ajouté plus tard.
+        Utilise PaymentService.derniers_paiements() avec requête JOIN
+        pour récupérer les informations de l'élève associé.
         """
         # Nettoyage de la liste existante
         while self.derniers_paiements_layout.count():
@@ -671,11 +668,87 @@ class Dashboard(QWidget):
             if child.widget():
                 child.widget().deleteLater()
         
-        # Placeholder pour l'instant (sera remplacé par le service)
-        placeholder = QLabel("Aucun paiement récent")
-        placeholder.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 12px; font-style: italic;")
-        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.derniers_paiements_layout.addWidget(placeholder)
+        try:
+            # Récupération des derniers paiements via le service
+            paiements = self.dashboard_service.payment_service.derniers_paiements(limite=6)
+            
+            if not paiements:
+                # Aucun paiement
+                placeholder = QLabel("Aucun paiement récent")
+                placeholder.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 12px; font-style: italic;")
+                placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.derniers_paiements_layout.addWidget(placeholder)
+                return
+            
+            # Affichage des paiements
+            for paiement in paiements:
+                paiement_widget = self._create_paiement_row(paiement)
+                self.derniers_paiements_layout.addWidget(paiement_widget)
+            
+            self.derniers_paiements_layout.addStretch()
+            
+        except Exception as e:
+            # En cas d'erreur, afficher un message
+            error_label = QLabel("Erreur lors du chargement")
+            error_label.setStyleSheet(f"color: {DANGER}; font-size: 12px;")
+            self.derniers_paiements_layout.addWidget(error_label)
+    
+    def _create_paiement_row(self, paiement: dict) -> QFrame:
+        """
+        Crée une ligne de paiement pour la carte "Derniers paiements".
+        
+        Args:
+            paiement: Dictionnaire contenant les informations du paiement.
+        
+        Returns:
+            QFrame configuré comme ligne de paiement.
+        """
+        row = QFrame()
+        row.setStyleSheet(f"""
+            QFrame {{
+                background: transparent;
+                border-bottom: 1px solid {BORDER};
+                padding: 8px 0;
+            }}
+        """)
+        
+        layout = QHBoxLayout(row)
+        layout.setSpacing(12)
+        
+        # Avatar avec initiales
+        initiales = f"{paiement['eleve_prenom'][0]}{paiement['eleve_nom'][0]}".upper()
+        avatar = QLabel(initiales)
+        avatar.setFixedSize(32, 32)
+        avatar.setStyleSheet(f"""
+            QLabel {{
+                background: {ACCENT};
+                color: white;
+                border-radius: 16px;
+                font-size: 12px;
+                font-weight: bold;
+            }}
+        """)
+        avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(avatar)
+        
+        # Nom de l'élève
+        nom_label = QLabel(f"{paiement['eleve_prenom']} {paiement['eleve_nom']}")
+        nom_label.setStyleSheet(f"font-size: 13px; color: {TEXT}; font-weight: 500;")
+        layout.addWidget(nom_label)
+        
+        layout.addStretch()
+        
+        # Mode de paiement
+        mode_label = QLabel(paiement['mode'].replace('_', ' ').title())
+        mode_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        layout.addWidget(mode_label)
+        
+        # Montant
+        montant_label = QLabel(format_fcfa(paiement['montant']))
+        montant_label.setStyleSheet(f"font-size: 13px; color: {TEXT}; font-weight: bold;")
+        layout.addWidget(montant_label)
+        
+        return row
     
     def _get_active_filter(self) -> str:
         """
