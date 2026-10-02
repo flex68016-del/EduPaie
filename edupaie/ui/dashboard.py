@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QHeaderView, QComboBox, QFrame, QPushButton,
     QGridLayout
 )
+from PySide6.QtCore import QTimer
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QFont, QColor, QPainter, QPen, QRadialGradient, QBrush
 from edupaie.services.dashboard_service import DashboardService
@@ -64,7 +65,13 @@ class CircularGaugeWidget(QWidget):
         """
         super().__init__(parent)
         self.percentage = 0  # Pourcentage encaissé/dû (0-100)
-        self.setMinimumSize(150, 150)
+        self.setMinimumSize(150, 180)
+        
+        # Animation du gradient
+        self.gradient_phase = 0.0
+        self.animation_timer = QTimer(self)
+        self.animation_timer.timeout.connect(self._animate_gradient)
+        self.animation_timer.start(50)  # 50ms = 20 FPS
     
     def set_percentage(self, percentage: float) -> None:
         """
@@ -75,6 +82,25 @@ class CircularGaugeWidget(QWidget):
         """
         self.percentage = percentage
         self.update()
+    
+    def _animate_gradient(self) -> None:
+        """
+        Anime le gradient pour créer un effet de flux.
+        
+        Pourquoi : Crée un effet visuel dynamique inspiré de Stripe/Linear.
+        """
+        self.gradient_phase = (self.gradient_phase + 0.02) % 1.0
+        self.update()
+    
+    def closeEvent(self, event):
+        """
+        Nettoie les ressources quand le widget est fermé.
+        
+        Pourquoi : Arrête le timer pour éviter les fuites de mémoire.
+        """
+        if hasattr(self, 'animation_timer'):
+            self.animation_timer.stop()
+        super().closeEvent(event)
     
     def paintEvent(self, event):
         """
@@ -87,23 +113,30 @@ class CircularGaugeWidget(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         # Dimensions
-        size = min(self.width(), self.height())
+        size = min(self.width(), self.height() - 30)  # Réduire la hauteur pour l'espace du texte
         center_x = self.width() // 2
-        center_y = self.height() // 2
-        radius = (size // 2) - 20
+        center_y = (self.height() - 30) // 2  # Centrer la jauge au-dessus du texte
+        radius = (size // 2) - 25
         
         # Cercle de fond (gris clair)
-        painter.setPen(QPen(QColor(BORDER), 12))
+        painter.setPen(QPen(QColor(BORDER), 16))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawEllipse(center_x - radius, center_y - radius, radius * 2, radius * 2)
         
-        # Arc de progression (dégradé accent)
-        # Pourquoi dégradé ACCENT → ACCENT_2 : Look premium inspiré de Stripe
-        gradient = QRadialGradient(center_x, center_y, radius)
-        gradient.setColorAt(0, QColor(ACCENT_2))
-        gradient.setColorAt(1, QColor(ACCENT))
+        # Arc de progression (gradient animé)
+        # Pourquoi gradient animé : Effet de flux dynamique inspiré de Stripe/Linear
         
-        pen = QPen(QBrush(gradient), 12)
+        # Gradient radial avec animation de phase
+        gradient = QRadialGradient(center_x, center_y, radius)
+        
+        # Calculer les couleurs avec décalage basé sur la phase d'animation
+        phase = self.gradient_phase
+        gradient.setColorAt(0.0, QColor(ACCENT_2))
+        gradient.setColorAt((0.3 + phase * 0.1) % 1.0, QColor(ACCENT))
+        gradient.setColorAt((0.6 + phase * 0.1) % 1.0, QColor("#6366F1"))  # Indigo
+        gradient.setColorAt(1.0, QColor(ACCENT_2))
+        
+        pen = QPen(QBrush(gradient), 16)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         
@@ -113,15 +146,17 @@ class CircularGaugeWidget(QWidget):
         
         painter.drawArc(center_x - radius, center_y - radius, radius * 2, radius * 2, start_angle, -span_angle)
         
-        # Pourcentage au centre
+        # Pourcentage au centre (légèrement décalé vers le haut)
         painter.setPen(QColor(TEXT))
-        painter.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-        painter.drawText(QRectF(0, 0, self.width(), self.height()), Qt.AlignmentFlag.AlignCenter, f"{int(self.percentage)}%")
+        painter.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        text_rect = QRectF(0, 0, self.width(), self.height() - 35)
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, f"{int(self.percentage)}%")
         
-        # Légende en dessous
+        # Légende en dessous (avec plus d'espace)
         painter.setPen(QColor(TEXT_MUTED))
-        painter.setFont(QFont("Segoe UI", 10))
-        painter.drawText(QRectF(0, self.height() - 30, self.width(), 30), Qt.AlignmentFlag.AlignCenter, "Encaissé / Dû")
+        painter.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        legend_rect = QRectF(0, self.height() - 45, self.width(), 25)
+        painter.drawText(legend_rect, Qt.AlignmentFlag.AlignCenter, "Encaissé / Dû")
 
 
 class Dashboard(QWidget):
