@@ -368,6 +368,39 @@ class StudentService:
         # Ajout via le repository
         return self.repository.add_class(nom.strip())
     
+    def delete_class(self, classe_id: int) -> None:
+        """
+        Supprime une classe après vérification des contraintes.
+        
+        Args:
+            classe_id: Identifiant de la classe à supprimer
+        
+        Raises:
+            NotFoundError: Si la classe n'existe pas.
+            BusinessRuleError: Si la classe contient des élèves (contrainte ON DELETE RESTRICT).
+        
+        Pourquoi refuser la suppression avec élèves : Les élèves attachés à une classe
+        sont des données importantes. La contrainte ON DELETE RESTRICT dans le schéma garantit
+        cela au niveau de la base de données.
+        """
+        # Vérification que la classe existe
+        classes = self.repository.list_classes()
+        classe_ids = [c['id'] for c in classes]
+        
+        if classe_id not in classe_ids:
+            raise NotFoundError(f"Aucune classe trouvée avec l'identifiant {classe_id}.")
+        
+        # Vérification que la classe ne contient pas d'élèves
+        student_count = self.repository.count_students_in_class(classe_id)
+        if student_count > 0:
+            raise BusinessRuleError(
+                f"Impossible de supprimer cette classe car elle contient {student_count} élève(s). "
+                "Supprimez ou déplacez d'abord les élèves de cette classe."
+            )
+        
+        # Suppression via le repository
+        self.repository.delete_class(classe_id)
+    
     def get_student_with_class_name(self, eleve_id: int) -> Optional[Dict[str, Any]]:
         """
         Récupère un élève avec le nom de sa classe au lieu de l'ID.

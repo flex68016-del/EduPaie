@@ -478,7 +478,9 @@ class Dashboard(QWidget):
         
         Pourquoi : Sépare le style de la création de l'interface pour une meilleure lisibilité.
         """
-        # Appliquer le style premium
+        # Le style est appliqué directement dans _create_ui avec refresh_style()
+        # Cette méthode est conservée pour compatibilité mais ne fait rien
+        pass
     
     def _load_dashboard_data(self) -> None:
         """

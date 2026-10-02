@@ -180,13 +180,25 @@ class StudentsView(QWidget):
         self.classe_filter.currentIndexChanged.connect(self._on_filter_changed)
         toolbar_layout.addWidget(self.classe_filter)
         
-        # Bouton "Nouvelle classe"
+        # Boutons "Nouvelle classe" et "Supprimer classe"
+        class_buttons_layout = QHBoxLayout()
+        class_buttons_layout.setSpacing(8)
+        
         self.btn_add_class = QPushButton(icon("plus", TEXT_MUTED, 16), "")
         self.btn_add_class.setFixedSize(40, 40)
         self.btn_add_class.setProperty("button_type", "ghost")
         self.btn_add_class.setToolTip("Nouvelle classe")
         self.btn_add_class.clicked.connect(self._on_add_class_clicked)
-        toolbar_layout.addWidget(self.btn_add_class)
+        class_buttons_layout.addWidget(self.btn_add_class)
+        
+        self.btn_delete_class = QPushButton(icon("trash", TEXT_MUTED, 16), "")
+        self.btn_delete_class.setFixedSize(40, 40)
+        self.btn_delete_class.setProperty("button_type", "ghost")
+        self.btn_delete_class.setToolTip("Supprimer la classe sélectionnée")
+        self.btn_delete_class.clicked.connect(self._on_delete_class_clicked)
+        class_buttons_layout.addWidget(self.btn_delete_class)
+        
+        toolbar_layout.addLayout(class_buttons_layout)
         
         # Filtre par statut (chips)
         self.filter_tous = QPushButton("Tous")
@@ -449,10 +461,30 @@ class StudentsView(QWidget):
         
         Ouvre le dialogue pour créer une nouvelle classe.
         """
-        dialog = ClassDialog(self.student_service, self)
+        dialog = ClassDialog(self.student_service, parent=self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Rafraîchir le filtre de classe
             self._load_classes_filter()
+    
+    def _on_delete_class_clicked(self) -> None:
+        """
+        Gère le clic sur le bouton "Supprimer classe".
+        
+        Ouvre le dialogue pour supprimer la classe sélectionnée.
+        """
+        classe_id = self.classe_filter.currentData()
+        if classe_id == 0:
+            # Aucune classe sélectionnée (0 correspond à "Toutes")
+            from edupaie.ui.toast import show_toast
+            show_toast("Veuillez sélectionner une classe à supprimer", parent=self)
+            return
+        
+        dialog = ClassDialog(self.student_service, classe_id=classe_id, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Rafraîchir le filtre de classe
+            self._load_classes_filter()
+            # Rafraîchir le tableau des élèves
+            self._load_students()
     
     def _show_context_menu(self, pos: QPoint) -> None:
         """

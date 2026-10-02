@@ -332,6 +332,54 @@ class StudentRepository:
             result = cursor.fetchone()
             return result['id'] if result else cursor.lastrowid
     
+    def delete_class(self, classe_id: int) -> None:
+        """
+        Supprime une classe de la base de données.
+        
+        Args:
+            classe_id: Identifiant de la classe à supprimer
+        
+        Raises:
+            sqlite3.IntegrityError: Si la classe a des élèves (ON DELETE RESTRICT)
+            ValueError: Si la classe n'existe pas
+        
+        Pourquoi DELETE avec WHERE id : Cible uniquement la classe spécifiée.
+        La contrainte ON DELETE RESTRICT dans le schéma empêchera la suppression
+        si des élèves existent dans cette classe.
+        """
+        with self.database.transaction() as cursor:
+            # Requête SQL : suppression d'une classe
+            # Pourquoi le paramètre "?" : Protection contre les injections SQL
+            cursor.execute(
+                "DELETE FROM classe WHERE id = ?",
+                (classe_id,)
+            )
+            
+            # Vérification que la classe existait
+            if cursor.rowcount == 0:
+                raise ValueError(f"Aucune classe trouvée avec l'ID {classe_id}")
+    
+    def count_students_in_class(self, classe_id: int) -> int:
+        """
+        Compte le nombre d'élèves dans une classe.
+        
+        Args:
+            classe_id: Identifiant de la classe
+        
+        Returns:
+            Le nombre d'élèves dans cette classe.
+        
+        Pourquoi cette méthode : Permet de vérifier si une classe peut être supprimée
+        (si elle contient des élèves, la suppression sera bloquée par la contrainte FK).
+        """
+        with self.database.transaction() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) as nombre FROM eleve WHERE classe_id = ?",
+                (classe_id,)
+            )
+            result = cursor.fetchone()
+            return result['nombre'] if result else 0
+    
     # ===== Section : Requêtes d'agrégation pour le tableau de bord =====
     
     def count_all_students(self) -> int:
