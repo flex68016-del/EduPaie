@@ -82,7 +82,7 @@ class StudentDetail(QDialog):
         
         # Configuration de la fenêtre
         self.setWindowTitle("Fiche Élève")
-        self.setMinimumSize(600, 500)
+        self.setMinimumSize(500, 400)
         
         # Création de l'interface
         self._create_ui()

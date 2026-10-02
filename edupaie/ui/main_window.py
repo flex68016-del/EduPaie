@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
         # Pourquoi minimum 900x600 : Adapte aux petits écrans tout en gardant l'UX
         self.setWindowTitle("EduPaie - Gestion des Paiements Scolaires")
         self.resize(1280, 800)
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(800, 500)
         
         # Centrer la fenêtre
         # Pourquoi : Meilleure UX au premier lancement
@@ -133,7 +133,8 @@ class MainWindow(QMainWindow):
         # Frame pour la barre latérale
         # Pourquoi QFrame : Permet d'appliquer un style de fond distinct
         sidebar = QFrame()
-        sidebar.setFixedWidth(240)  # Largeur premium
+        sidebar.setMinimumWidth(200)  # Largeur minimum pour petits écrans
+        sidebar.setMaximumWidth(240)  # Largeur maximum pour grands écrans
         sidebar.setObjectName("sidebar")
         
         # Dégradé vertical pour la barre latérale
