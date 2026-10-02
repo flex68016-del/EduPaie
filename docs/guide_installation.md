@@ -124,14 +124,28 @@ Pour créer un installateur Windows standard (.exe d'installation) :
    build.bat
    ```
 
-Si Inno Setup est installé, le script créera automatiquement l'installateur dans `installer/output/`.
+Si Inno Setup est installé, le script créera automatiquement l'installateur dans `installer/installer/Edupaie-Setup.exe` (environ 235 Mo).
 
 L'installateur inclut :
 - Installation dans `Program Files\EduPaie`
 - Raccourcis (Menu Démarrer + Bureau)
 - Icône de l'application
 - Conservation des données utilisateur dans `%APPDATA%\EduPaie`
-- Distribution compressée (~30-40 Mo)
+- Assistant d'installation Windows standard
+
+### Distribution
+
+Pour distribuer l'application, vous avez deux options :
+
+1. **Installateur complet** (recommandé) : `installer/installer/Edupaie-Setup.exe` (235 Mo)
+   - Assistant d'installation guidé
+   - Création automatique des raccourcis
+   - Désinstallation propre via le Panneau de configuration
+
+2. **Exécutable autonome** : `dist/Edupaie.exe` (237 Mo)
+   - À copier directement dans le dossier de l'utilisateur
+   - Pas d'installation requise
+   - Les données seront créées dans `%APPDATA%\EduPaie` au premier lancement
 
 ## Structure du projet
 
@@ -147,6 +161,9 @@ EduPaie/
 │   └── main.py          # Point d'entrée
 ├── docs/                # Documentation
 ├── dist/                # Exécutable construit
+├── installer/           # Scripts et output de l'installateur
+│   ├── edupaie.iss      # Script Inno Setup
+│   └── installer/       # Installateur final (Edupaie-Setup.exe)
 ├── edupaie.spec         # Configuration PyInstaller
 ├── build.bat            # Script de build Windows
 ├── requirements.txt     # Dépendances Python

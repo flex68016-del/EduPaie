@@ -104,11 +104,12 @@ Pour créer un installateur Windows standard (.exe d'installation), vous devez :
    build.bat
    ```
 
-Si Inno Setup est installé, le script créera automatiquement l'installateur dans `installer/output/`. L'installateur inclut :
+Si Inno Setup est installé, le script créera automatiquement l'installateur dans `installer/installer/Edupaie-Setup.exe` (environ 235 Mo). L'installateur inclut :
 - Installation dans `Program Files\EduPaie`
 - Raccourcis (Menu Démarrer + Bureau)
 - Icône de l'application
 - Conservation des données utilisateur dans `%APPDATA%\EduPaie`
+- Assistant d'installation Windows standard
 
 ## Architecture
 
