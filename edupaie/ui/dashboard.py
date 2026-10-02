@@ -65,7 +65,7 @@ class CircularGaugeWidget(QWidget):
         """
         super().__init__(parent)
         self.percentage = 0  # Pourcentage encaissé/dû (0-100)
-        self.setMinimumSize(150, 180)
+        self.setMinimumSize(120, 150)
         
         # Animation du gradient
         self.gradient_phase = 0.0
@@ -112,14 +112,18 @@ class CircularGaugeWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Dimensions
-        size = min(self.width(), self.height() - 30)  # Réduire la hauteur pour l'espace du texte
+        # Dimensions adaptatives
+        text_height = 25
+        size = min(self.width(), self.height() - text_height)
         center_x = self.width() // 2
-        center_y = (self.height() - 30) // 2  # Centrer la jauge au-dessus du texte
-        radius = (size // 2) - 25
+        center_y = (self.height() - text_height) // 2
+        radius = max((size // 2) - 20, 15)  # Minimum 15px radius
+        
+        # Épaisseur de l'anneau adaptative
+        ring_width = max(12, min(16, radius // 3))
         
         # Cercle de fond (gris clair)
-        painter.setPen(QPen(QColor(BORDER), 16))
+        painter.setPen(QPen(QColor(BORDER), ring_width))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawEllipse(center_x - radius, center_y - radius, radius * 2, radius * 2)
         
@@ -136,7 +140,7 @@ class CircularGaugeWidget(QWidget):
         gradient.setColorAt((0.6 + phase * 0.1) % 1.0, QColor("#6366F1"))  # Indigo
         gradient.setColorAt(1.0, QColor(ACCENT_2))
         
-        pen = QPen(QBrush(gradient), 16)
+        pen = QPen(QBrush(gradient), ring_width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         
@@ -146,16 +150,18 @@ class CircularGaugeWidget(QWidget):
         
         painter.drawArc(center_x - radius, center_y - radius, radius * 2, radius * 2, start_angle, -span_angle)
         
-        # Pourcentage au centre (légèrement décalé vers le haut)
+        # Pourcentage au centre (taille adaptative)
+        font_size = max(16, min(20, radius // 2))
         painter.setPen(QColor(TEXT))
-        painter.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
-        text_rect = QRectF(0, 0, self.width(), self.height() - 35)
+        painter.setFont(QFont("Segoe UI", font_size, QFont.Weight.Bold))
+        text_rect = QRectF(0, 0, self.width(), self.height() - text_height)
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, f"{int(self.percentage)}%")
         
-        # Légende en dessous (avec plus d'espace)
+        # Légende en dessous (taille adaptative)
+        legend_font_size = max(9, min(10, radius // 4))
         painter.setPen(QColor(TEXT_MUTED))
-        painter.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
-        legend_rect = QRectF(0, self.height() - 45, self.width(), 25)
+        painter.setFont(QFont("Segoe UI", legend_font_size, QFont.Weight.Medium))
+        legend_rect = QRectF(0, self.height() - text_height, self.width(), text_height)
         painter.drawText(legend_rect, Qt.AlignmentFlag.AlignCenter, "Encaissé / Dû")
 
 
@@ -210,8 +216,8 @@ class Dashboard(QWidget):
         - Tableau des élèves avec leur informations
         """
         layout = QVBoxLayout()
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(24)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(16)
         
         # ===== Section : En-tête =====
         header_layout = QHBoxLayout()
@@ -220,7 +226,7 @@ class Dashboard(QWidget):
         title_date_layout = QVBoxLayout()
         
         title_label = QLabel("Tableau de bord")
-        title_label.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {TEXT};")
+        title_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {TEXT};")
         title_date_layout.addWidget(title_label)
         
         # Date du jour en français
@@ -228,7 +234,7 @@ class Dashboard(QWidget):
         today = datetime.now()
         date_str = today.strftime("%A %d %B %Y").capitalize()
         date_label = QLabel(date_str)
-        date_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        date_label.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         title_date_layout.addWidget(date_label)
         
         header_layout.addLayout(title_date_layout)
@@ -238,29 +244,29 @@ class Dashboard(QWidget):
         
         # ===== Section : Cartes KPI =====
         kpi_layout = QHBoxLayout()
-        kpi_layout.setSpacing(16)
+        kpi_layout.setSpacing(12)
         
         # Carte 1 : Nombre d'élèves
         self.card_eleves = self._create_kpi_card("Élèves", "0", "users", ICON_TINTS["blue"], "18 élèves inscrits")
-        kpi_layout.addWidget(self.card_eleves)
+        kpi_layout.addWidget(self.card_eleves, stretch=1)
         
         # Carte 2 : Total encaissé
         self.card_encaisse = self._create_kpi_card("Encaissé", "0 FCFA", "wallet", ICON_TINTS["green"], "sur 1 035 000 FCFA dus")
-        kpi_layout.addWidget(self.card_encaisse)
+        kpi_layout.addWidget(self.card_encaisse, stretch=1)
         
         # Carte 3 : Restant dû
         self.card_restant = self._create_kpi_card("Restant dû", "0 FCFA", "alert", ICON_TINTS["amber"], "en attente de paiement")
-        kpi_layout.addWidget(self.card_restant)
+        kpi_layout.addWidget(self.card_restant, stretch=1)
         
         # Carte 4 : Élèves non soldés
         self.card_non_soldes = self._create_kpi_card("Non soldés", "0", "alert", ICON_TINTS["red"], "paiements en retard")
-        kpi_layout.addWidget(self.card_non_soldes)
+        kpi_layout.addWidget(self.card_non_soldes, stretch=1)
         
         layout.addLayout(kpi_layout)
         
         # ===== Section : Deux cartes côte à côte =====
         row2_layout = QHBoxLayout()
-        row2_layout.setSpacing(16)
+        row2_layout.setSpacing(12)
         
         # Carte Recouvrement (jauge circulaire)
         self.card_recouvrement = self._create_recouvrement_card()
@@ -296,22 +302,22 @@ class Dashboard(QWidget):
             QFrame {{
                 background: {SURFACE};
                 border: 1px solid {BORDER};
-                border-radius: 16px;
+                border-radius: 12px;
             }}
         """)
         add_shadow(card)
         
         layout = QHBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(16)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(12)
         
-        # Pastille d'icône teintée (cercle 44 px)
+        # Pastille d'icône teintée (cercle 36 px)
         icon_bg = QFrame()
-        icon_bg.setFixedSize(44, 44)
+        icon_bg.setFixedSize(36, 36)
         icon_bg.setStyleSheet(f"""
             QFrame {{
                 background: {icon_tint['bg']};
-                border-radius: 22px;
+                border-radius: 18px;
             }}
         """)
         
@@ -320,25 +326,25 @@ class Dashboard(QWidget):
         icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         icon_label = QLabel()
-        icon_label.setPixmap(icon(icon_name, icon_tint['fg'], 24).pixmap(24, 24))
+        icon_label.setPixmap(icon(icon_name, icon_tint['fg'], 20).pixmap(20, 20))
         icon_layout.addWidget(icon_label)
         
         layout.addWidget(icon_bg)
         
         # Labels
         labels_layout = QVBoxLayout()
-        labels_layout.setSpacing(4)
+        labels_layout.setSpacing(2)
         
         title_label = QLabel(title)
-        title_label.setStyleSheet(f"font-size: 12px; color: {TEXT_MUTED}; font-weight: 500;")
+        title_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED}; font-weight: 500;")
         labels_layout.addWidget(title_label)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet(f"font-size: 26px; color: {TEXT}; font-weight: bold;")
+        value_label.setStyleSheet(f"font-size: 18px; color: {TEXT}; font-weight: bold;")
         labels_layout.addWidget(value_label)
         
         context_label = QLabel(context)
-        context_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        context_label.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         labels_layout.addWidget(context_label)
         
         layout.addLayout(labels_layout)
@@ -364,18 +370,18 @@ class Dashboard(QWidget):
             QFrame {{
                 background: {SURFACE};
                 border: 1px solid {BORDER};
-                border-radius: 16px;
+                border-radius: 12px;
             }}
         """)
         add_shadow(card)
         
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(16)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(12)
         
         # Titre
         title_label = QLabel("Recouvrement")
-        title_label.setStyleSheet(f"font-size: 14px; color: {TEXT}; font-weight: 600;")
+        title_label.setStyleSheet(f"font-size: 12px; color: {TEXT}; font-weight: 600;")
         layout.addWidget(title_label)
         
         # Jauge circulaire (widget personnalisé)
@@ -384,16 +390,16 @@ class Dashboard(QWidget):
         
         # Répartition par statut
         stats_layout = QHBoxLayout()
-        stats_layout.setSpacing(16)
+        stats_layout.setSpacing(12)
         
         # Soldés
         soldes_layout = QVBoxLayout()
         soldes_dot = QLabel("●")
-        soldes_dot.setStyleSheet(f"color: {STATUS['Soldé']['bg']}; font-size: 12px;")
+        soldes_dot.setStyleSheet(f"color: {STATUS['Soldé']['bg']}; font-size: 10px;")
         soldes_count = QLabel("0")
-        soldes_count.setStyleSheet(f"font-size: 18px; color: {TEXT}; font-weight: bold;")
+        soldes_count.setStyleSheet(f"font-size: 14px; color: {TEXT}; font-weight: bold;")
         soldes_label = QLabel("Soldés")
-        soldes_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        soldes_label.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         soldes_layout.addWidget(soldes_dot)
         soldes_layout.addWidget(soldes_count)
         soldes_layout.addWidget(soldes_label)
@@ -402,11 +408,11 @@ class Dashboard(QWidget):
         # Partiels
         partiels_layout = QVBoxLayout()
         partiels_dot = QLabel("●")
-        partiels_dot.setStyleSheet(f"color: {STATUS['Partiellement payé']['bg']}; font-size: 12px;")
+        partiels_dot.setStyleSheet(f"color: {STATUS['Partiellement payé']['bg']}; font-size: 10px;")
         partiels_count = QLabel("0")
-        partiels_count.setStyleSheet(f"font-size: 18px; color: {TEXT}; font-weight: bold;")
+        partiels_count.setStyleSheet(f"font-size: 14px; color: {TEXT}; font-weight: bold;")
         partiels_label = QLabel("Partiels")
-        partiels_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        partiels_label.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         partiels_layout.addWidget(partiels_dot)
         partiels_layout.addWidget(partiels_count)
         partiels_layout.addWidget(partiels_label)
@@ -415,11 +421,11 @@ class Dashboard(QWidget):
         # Non payés
         non_payes_layout = QVBoxLayout()
         non_payes_dot = QLabel("●")
-        non_payes_dot.setStyleSheet(f"color: {STATUS['Non payé']['bg']}; font-size: 12px;")
+        non_payes_dot.setStyleSheet(f"color: {STATUS['Non payé']['bg']}; font-size: 10px;")
         non_payes_count = QLabel("0")
-        non_payes_count.setStyleSheet(f"font-size: 18px; color: {TEXT}; font-weight: bold;")
+        non_payes_count.setStyleSheet(f"font-size: 14px; color: {TEXT}; font-weight: bold;")
         non_payes_label = QLabel("Non payés")
-        non_payes_label.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        non_payes_label.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         non_payes_layout.addWidget(non_payes_dot)
         non_payes_layout.addWidget(non_payes_count)
         non_payes_layout.addWidget(non_payes_label)
@@ -449,23 +455,23 @@ class Dashboard(QWidget):
             QFrame {{
                 background: {SURFACE};
                 border: 1px solid {BORDER};
-                border-radius: 16px;
+                border-radius: 12px;
             }}
         """)
         add_shadow(card)
         
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
         
         # Titre
         title_label = QLabel("Derniers paiements")
-        title_label.setStyleSheet(f"font-size: 14px; color: {TEXT}; font-weight: 600;")
+        title_label.setStyleSheet(f"font-size: 12px; color: {TEXT}; font-weight: 600;")
         layout.addWidget(title_label)
         
         # Liste des paiements (6 lignes max)
         self.derniers_paiements_layout = QVBoxLayout()
-        self.derniers_paiements_layout.setSpacing(8)
+        self.derniers_paiements_layout.setSpacing(6)
         layout.addLayout(self.derniers_paiements_layout)
         
         card.setLayout(layout)
