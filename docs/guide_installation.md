@@ -48,7 +48,8 @@ L'interface utilise un design premium inspiré de Stripe, Linear et Notion :
 - Typographie Inter ou Segoe UI
 - Cartes avec ombres douces et rayons premium
 - Navigation par barre latérale avec transitions fluides
-- Tableau de bord avec KPI, jauge circulaire et derniers paiements
+- Tableau de bord avec KPI, jauge circulaire animée et derniers paiements
+- Responsivité adaptative pour écrans de petite taille (minimum 800×500)
 
 ### Emplacement des données
 

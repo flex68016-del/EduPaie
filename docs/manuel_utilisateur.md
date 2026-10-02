@@ -1,5 +1,27 @@
 # Manuel utilisateur EduPaie
 
+## Gestion des classes
+
+### Créer une nouvelle classe
+
+1. Cliquez sur l'onglet **Élèves** dans la barre de navigation
+2. Cliquez sur le bouton **+** (plus) à côté du filtre par classe
+3. Entrez le nom de la classe (ex: 6ème A, 5ème B)
+4. Cliquez sur **Enregistrer**
+5. La classe apparaît dans le filtre par classe
+
+### Supprimer une classe
+
+⚠️ **Attention** : La suppression d'une classe n'est possible que si elle ne contient aucun élève.
+
+1. Cliquez sur l'onglet **Élèves** dans la barre de navigation
+2. Sélectionnez la classe à supprimer dans le filtre par classe
+3. Cliquez sur le bouton 🗑️ (poubelle) à côté du bouton de création de classe
+4. Confirmez la suppression dans la boîte de dialogue
+5. La classe est supprimée de la base de données
+
+Si la classe contient des élèves, la suppression sera refusée avec un message d'erreur indiquant le nombre d'élèves concernés.
+
 ## Enregistrer un élève
 
 1. Cliquez sur l'onglet **Élèves** dans la barre de navigation
