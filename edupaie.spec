@@ -161,6 +161,8 @@ exe = EXE(
         'Qt6Widgets.dll',
         'python3*.dll',
         'qwindows.dll',
+        'fontTools*.dll',  # Exclure fontTools pour éviter les blocages Windows Defender
+        'bezier*.dll',  # Exclure bezierTools (dépendance de fontTools)
     ],
     runtime_tmpdir=None,
     console=False,

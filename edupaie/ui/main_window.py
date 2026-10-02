@@ -69,10 +69,10 @@ class MainWindow(QMainWindow):
         
         # Configuration de la fenêtre
         # Pourquoi 1280x800 : Taille premium standard pour applications desktop
-        # Pourquoi minimum 1100x700 : Garantit l'affichage correct sur petits écrans
+        # Pourquoi minimum 900x600 : Adapte aux petits écrans tout en gardant l'UX
         self.setWindowTitle("EduPaie - Gestion des Paiements Scolaires")
         self.resize(1280, 800)
-        self.setMinimumSize(1100, 700)
+        self.setMinimumSize(900, 600)
         
         # Centrer la fenêtre
         # Pourquoi : Meilleure UX au premier lancement
