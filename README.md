@@ -62,9 +62,17 @@ venv\Scripts\python.exe edupaie/main.py
 
 ### Exécutable Windows
 
-1. Téléchargez `Edupaie.exe` depuis le dépôt GitHub
-2. Placez-le dans le dossier de votre choix
-3. Double-cliquez pour lancer
+**Note importante** : L'exécutable et l'installateur ne sont pas inclus dans le dépôt GitHub car ils sont trop volumineux. Vous devez les construire localement.
+
+#### Option 1 : Exécutable autonome
+1. Clonez le dépôt et suivez les instructions de construction ci-dessous
+2. L'exécutable sera créé dans `dist/Edupaie.exe` (~237 Mo)
+3. Placez-le dans le dossier de votre choix et double-cliquez pour lancer
+
+#### Option 2 : Installateur Windows (recommandé)
+1. Clonez le dépôt et suivez les instructions de construction ci-dessous
+2. L'installateur sera créé dans `installer/installer/Edupaie-Setup.exe` (~235 Mo)
+3. Lancez l'installateur pour installer EduPaie avec les raccourcis (Menu Démarrer + Bureau)
 
 Au premier lancement, l'application crée automatiquement le dossier de données dans `%APPDATA%\EduPaie`.
 

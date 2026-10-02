@@ -7,12 +7,25 @@
 - Windows 10 ou Windows 11
 - Aucune installation de Python requise
 
+### Important : Fichiers non inclus sur GitHub
+
+**Note** : L'exécutable et l'installateur ne sont pas inclus dans le dépôt GitHub car ils sont trop volumineux (~235-237 Mo). Vous devez les construire localement en suivant les instructions de la section "Construire l'exécutable" ci-dessous.
+
 ### Installation
 
-1. Téléchargez le fichier `Edupaie.exe` depuis le dépôt GitHub
-2. Placez le fichier dans le dossier de votre choix (ex: `C:\Program Files\EduPaie\`)
-3. Créez un raccourci sur le bureau si nécessaire
-4. Lancez l'application en double-cliquant sur `Edupaie.exe`
+#### Option 1 : Installer depuis le code source (recommandé)
+1. Clonez le dépôt GitHub
+2. Installez Inno Setup : https://jrsoftware.org/isdl.php
+3. Suivez les instructions de construction ci-dessous
+4. Lancez l'installateur généré
+
+#### Option 2 : Exécutable autonome
+1. Clonez le dépôt GitHub
+2. Suivez les instructions de construction ci-dessous
+3. Utilisez l'exécutable `dist/Edupaie.exe` généré
+4. Placez-le dans le dossier de votre choix (ex: `C:\Program Files\EduPaie\`)
+5. Créez un raccourci sur le bureau si nécessaire
+6. Lancez l'application en double-cliquant sur `Edupaie.exe`
 
 ### Premier lancement
 
@@ -21,12 +34,12 @@ Au premier lancement, l'application :
 - Copie la base de données modèle dans ce dossier
 - Initialise le fichier de log `edupaie_errors.log`
 
-### Taille de l'exécutable
+### Taille des fichiers
 
-- **Version optimisée** : ~237 Mo (v0.12-exe-leger)
-- **Réduction** : -22 Mo (-8.5%) par rapport à la version originale (259 Mo)
+- **Exécutable** : ~237 Mo (`dist/Edupaie.exe`)
+- **Installateur** : ~235 Mo (`installer/installer/Edupaie-Setup.exe`)
 
-Note : La taille reste importante car PySide6 complet est nécessaire pour les fonctionnalités d'aperçu PDF (QtPdf, QtPdfWidgets). L'installateur Inno Setup peut être utilisé pour une distribution compressée (~30-40 Mo).
+Note : La taille reste importante car PySide6 complet est nécessaire pour les fonctionnalités d'aperçu PDF (QtPdf, QtPdfWidgets).
 
 ### Interface utilisateur
 
